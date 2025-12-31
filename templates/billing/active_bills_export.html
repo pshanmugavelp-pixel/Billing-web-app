@@ -268,38 +268,63 @@
                         {% for bill_data in bills_with_items %}
                             {% set bill = bill_data.bill %}
                             {% set items = bill_data.items %}
-                            {% for item in items %}
-                            <tr class="item-row">
-                                <td>{{ bill.bill_id }}</td>
-                                <td>{{ bill.bill_date }}</td>
-                                <td>{{ bill.customer_name }}</td>
-                                <td>{{ bill.customer_gst or 'N/A' }}</td>
-                                <td>{{ item.product_name }}</td>
-                                <td>{{ item.hsn_code or 'N/A' }}</td>
-                                <td>{{ item.quantity }}</td>
-                                <td>{{ "%.2f"|format(item.unit_price) }}</td>
-                                <td>{{ "%.2f"|format(item.gst_percentage) }}%</td>
-                                <td>{{ "%.2f"|format(item.igst) }}</td>
-                                <td>{{ "%.2f"|format(item.sgst) }}</td>
-                                <td>{{ "%.2f"|format(item.cgst) }}</td>
-                                <td>{{ "%.2f"|format(item.total) }}</td>
-                                <td>{{ "%.2f"|format(bill.subtotal) }}</td>
-                                <td>{{ "%.2f"|format(bill.gst_amount) }}</td>
-                                <td>{{ "%.2f"|format(bill.total_amount) }}</td>
-                                <td>
-                                    <span class="status-badge status-{{ bill.payment_status|lower }}">
-                                        {{ bill.payment_status }}
-                                    </span>
-                                </td>
-                                <td>{{ bill.customer_id }}</td>
-                                <td>{{ bill.vendor_code or 'N/A' }}</td>
-                                <td>{{ bill.email or 'N/A' }}</td>
-                                <td>{{ bill.mobile or 'N/A' }}</td>
-                                <td>{{ bill.address or 'N/A' }}</td>
-                                <td>{{ bill.state or 'N/A' }}</td>
-                                <td>{{ bill.notes or '' }}</td>
-                            </tr>
-                            {% endfor %}
+                            {% if items %}
+                                {% for item in items %}
+                                <tr class="item-row">
+                                    <td>{{ bill.bill_id }}</td>
+                                    <td>{{ bill.bill_date }}</td>
+                                    <td>{{ bill.customer_name }}</td>
+                                    <td>{{ bill.customer_gst or 'N/A' }}</td>
+                                    <td>{{ item.product_name }}</td>
+                                    <td>{{ item.hsn_code or 'N/A' }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ "%.2f"|format(item.unit_price) }}</td>
+                                    <td>{{ "%.2f"|format(item.gst_percentage) }}%</td>
+                                    <td>{{ "%.2f"|format(item.igst) }}</td>
+                                    <td>{{ "%.2f"|format(item.sgst) }}</td>
+                                    <td>{{ "%.2f"|format(item.cgst) }}</td>
+                                    <td>{{ "%.2f"|format(item.total) }}</td>
+                                    <td>{{ "%.2f"|format(bill.subtotal) }}</td>
+                                    <td>{{ "%.2f"|format(bill.gst_amount) }}</td>
+                                    <td>{{ "%.2f"|format(bill.total_amount) }}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ bill.payment_status|lower }}">
+                                            {{ bill.payment_status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ bill.customer_id }}</td>
+                                    <td>{{ bill.vendor_code or 'N/A' }}</td>
+                                    <td>{{ bill.email or 'N/A' }}</td>
+                                    <td>{{ bill.mobile or 'N/A' }}</td>
+                                    <td>{{ bill.address or 'N/A' }}</td>
+                                    <td>{{ bill.state or 'N/A' }}</td>
+                                    <td>{{ bill.notes or '' }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr class="item-row">
+                                    <td>{{ bill.bill_id }}</td>
+                                    <td>{{ bill.bill_date }}</td>
+                                    <td>{{ bill.customer_name }}</td>
+                                    <td>{{ bill.customer_gst or 'N/A' }}</td>
+                                    <td colspan="9" style="text-align: center; color: #999; font-style: italic;">No items</td>
+                                    <td>{{ "%.2f"|format(bill.subtotal) }}</td>
+                                    <td>{{ "%.2f"|format(bill.gst_amount) }}</td>
+                                    <td>{{ "%.2f"|format(bill.total_amount) }}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ bill.payment_status|lower }}">
+                                            {{ bill.payment_status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ bill.customer_id }}</td>
+                                    <td>{{ bill.vendor_code or 'N/A' }}</td>
+                                    <td>{{ bill.email or 'N/A' }}</td>
+                                    <td>{{ bill.mobile or 'N/A' }}</td>
+                                    <td>{{ bill.address or 'N/A' }}</td>
+                                    <td>{{ bill.state or 'N/A' }}</td>
+                                    <td>{{ bill.notes or '' }}</td>
+                                </tr>
+                            {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>

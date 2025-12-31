@@ -801,12 +801,11 @@ def active_bills_export():
             ORDER BY bi.id
         ''', (bill['bill_id'],)).fetchall()
         
-        # Only add bills that have items
-        if items:
-            bills_with_items.append({
-                'bill': dict(bill),
-                'items': [dict(item) for item in items]
-            })
+        # Add all bills, even if they have no items
+        bills_with_items.append({
+            'bill': dict(bill),
+            'items': [dict(item) for item in items] if items else []
+        })
     
     conn.close()
     return render_template('billing/active_bills_export.html', bills_with_items=bills_with_items)
