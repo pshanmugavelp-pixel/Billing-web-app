@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Bill Cancellation - Inventory Changes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .warning-icon {
+            font-size: 40px;
+            color: #ff9800;
+        }
+
+        .warning-text h2 {
+            color: #856404;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .warning-text p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e74c3c;
+        }
+
+        .bills-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .bill-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .bill-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .bill-item strong {
+            color: #e74c3c;
+        }
+
+        .changes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .changes-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .changes-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .changes-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        .changes-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .changes-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .restore {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .summary-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .summary-box p {
+            color: #1565c0;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .summary-box strong {
+            color: #0d47a1;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        .arrow {
+            display: inline-block;
+            margin: 0 10px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .changes-table {
+                font-size: 12px;
+            }
+
+            .changes-table th,
+            .changes-table td {
+                padding: 8px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Confirm Bill Cancellation</h1>
+            <p>Review inventory changes before proceeding</p>
+        </div>
+
+        <div class="content">
+            <div class="warning-box">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-text">
+                    <h2>Bills Will Be Cancelled</h2>
+                    <p>
+                        Cancelling these bills will mark them as "Cancelled" and restore the inventory.
+                        The bill items will be added back to stock. Please review the changes below carefully before confirming.
+                    </p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📋 Bills to be Cancelled</h3>
+                <div class="summary-box">
+                    <p><strong>Total Bills:</strong> {{ bills|length }}</p>
+                </div>
+                <div class="bills-list">
+                    {% for bill in bills %}
+                    <div class="bill-item">
+                        <strong>Bill ID:</strong> {{ bill.bill_id }} | 
+                        <strong>Customer:</strong> {{ bill.customer_name }} | 
+                        <strong>Amount:</strong> ₹{{ "%.2f"|format(bill.total_amount) }} | 
+                        <strong>Date:</strong> {{ bill.bill_date }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if inventory_changes %}
+            <div class="section">
+                <h3>📊 Inventory Changes Summary</h3>
+                
+                <div class="summary-box">
+                    <p><strong>Total Products Affected:</strong> {{ inventory_changes|length }}</p>
+                    <p><strong>Action:</strong> All quantities will be restored to inventory</p>
+                </div>
+
+                <table class="changes-table">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Current Stock</th>
+                            <th>Restore Quantity</th>
+                            <th>New Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for change in inventory_changes %}
+                        <tr>
+                            <td><strong>{{ change.product_name }}</strong></td>
+                            <td>{{ change.current_qty }}</td>
+                            <td>
+                                <span class="restore">+{{ change.restore_qty }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ change.current_qty }}</strong>
+                                <span class="arrow">→</span>
+                                <strong>{{ change.new_qty }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="section">
+                <div class="summary-box">
+                    <p><strong>No inventory changes detected.</strong></p>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('billing.cancel_bills') }}">
+                <!-- Hidden fields to preserve bill IDs -->
+                {% for bill_id in bill_ids %}
+                <input type="hidden" name="bill_ids[]" value="{{ bill_id }}">
+                {% endfor %}
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-confirm">
+                        ✓ Confirm & Cancel Bills
+                    </button>
+                    <a href="{{ url_for('billing.index') }}" class="btn btn-cancel">
+                        ✗ Go Back
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

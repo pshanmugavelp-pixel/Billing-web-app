@@ -11,17 +11,34 @@ billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
 @billing_bp.route('/')
 def index():
-    """Display all bills"""
+    """Display all bills with optional filter for cancelled bills"""
+    show_cancelled = request.args.get('show_cancelled', 'false') == 'true'
+    
     conn = get_db_connection()
-    bills = conn.execute('''
-        SELECT b.*, c.name as customer_name,
-               (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.id) as item_count
-        FROM billing b 
-        JOIN customers c ON b.customer_id = c.id 
-        ORDER BY b.created_at DESC
-    ''').fetchall()
+    
+    if show_cancelled:
+        # Show only cancelled bills
+        bills = conn.execute('''
+            SELECT b.*, c.name as customer_name,
+                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.id) as item_count
+            FROM billing b
+            JOIN customers c ON b.customer_id = c.id
+            WHERE b.payment_status = 'Cancelled'
+            ORDER BY b.created_at DESC
+        ''').fetchall()
+    else:
+        # Show all bills except cancelled
+        bills = conn.execute('''
+            SELECT b.*, c.name as customer_name,
+                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.id) as item_count
+            FROM billing b
+            JOIN customers c ON b.customer_id = c.id
+            WHERE b.payment_status != 'Cancelled'
+            ORDER BY b.created_at DESC
+        ''').fetchall()
+    
     conn.close()
-    return render_template('billing/index.html', bills=bills)
+    return render_template('billing/index.html', bills=bills, show_cancelled=show_cancelled)
 
 @billing_bp.route('/create', methods=['GET', 'POST'])
 def create():
@@ -266,9 +283,101 @@ def delete(id):
     flash('Bill deleted successfully! Inventory restored.', 'success')
     return redirect(url_for('billing.index'))
 
+@billing_bp.route('/cancel-bills-confirm', methods=['POST'])
+def cancel_bills_confirm():
+    """Show confirmation page for cancelling multiple bills with inventory changes"""
+    bill_internal_ids = request.form.getlist('bill_ids[]')
+    
+    if not bill_internal_ids:
+        flash('No bills selected!', 'error')
+        return redirect(url_for('billing.index'))
+    
+    conn = get_db_connection()
+    
+    # Get bill details
+    placeholders = ','.join('?' * len(bill_internal_ids))
+    bills = conn.execute(f'''
+        SELECT b.*, c.name as customer_name
+        FROM billing b
+        JOIN customers c ON b.customer_id = c.id
+        WHERE b.id IN ({placeholders})
+    ''', bill_internal_ids).fetchall()
+    
+    # Calculate inventory changes for all selected bills
+    inventory_changes = []
+    product_totals = {}
+    
+    for bill in bills:
+        items = conn.execute('''
+            SELECT product_id, product_name, quantity
+            FROM billing_items
+            WHERE bill_id = ?
+        ''', (bill['id'],)).fetchall()
+        
+        for item in items:
+            pid = item['product_id']
+            if pid in product_totals:
+                product_totals[pid]['quantity'] += item['quantity']
+            else:
+                product_totals[pid] = {
+                    'product_name': item['product_name'],
+                    'quantity': item['quantity']
+                }
+    
+    # Get current inventory and calculate changes
+    for pid, data in product_totals.items():
+        current_inv = conn.execute('SELECT quantity FROM inventory WHERE id = ?', (pid,)).fetchone()
+        current_qty = current_inv['quantity'] if current_inv else 0
+        new_qty = current_qty + data['quantity']
+        
+        inventory_changes.append({
+            'product_id': pid,
+            'product_name': data['product_name'],
+            'current_qty': current_qty,
+            'restore_qty': data['quantity'],
+            'new_qty': new_qty
+        })
+    
+    conn.close()
+    
+    return render_template('billing/cancel_confirm.html',
+                         bills=[dict(b) for b in bills],
+                         bill_ids=bill_internal_ids,
+                         inventory_changes=inventory_changes)
+
+@billing_bp.route('/cancel-bills', methods=['POST'])
+def cancel_bills():
+    """Cancel multiple bills and restore inventory"""
+    bill_internal_ids = request.form.getlist('bill_ids[]')
+    
+    if not bill_internal_ids:
+        flash('No bills selected!', 'error')
+        return redirect(url_for('billing.index'))
+    
+    conn = get_db_connection()
+    
+    # Restore inventory for all bills being cancelled
+    for bill_id in bill_internal_ids:
+        items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
+                           (bill_id,)).fetchall()
+        
+        for item in items:
+            conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                        (item['quantity'], item['product_id']))
+    
+    # Update bills to Cancelled status
+    placeholders = ','.join('?' * len(bill_internal_ids))
+    conn.execute(f'UPDATE billing SET payment_status = ? WHERE id IN ({placeholders})',
+                ['Cancelled'] + bill_internal_ids)
+    conn.commit()
+    conn.close()
+    
+    flash(f'{len(bill_internal_ids)} bill(s) cancelled successfully! Inventory restored.', 'success')
+    return redirect(url_for('billing.index'))
+
 @billing_bp.route('/delete-multiple', methods=['POST'])
 def delete_multiple():
-    """Delete multiple bills"""
+    """Delete multiple bills (kept for backward compatibility)"""
     bill_internal_ids = request.form.getlist('bill_ids[]')
     
     if not bill_internal_ids:
