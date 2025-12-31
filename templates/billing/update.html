@@ -573,17 +573,33 @@
             // Calculate CGST/SGST or IGST based on customer state
             let cgst = 0, sgst = 0, igst = 0;
             
-            // Normalize states for comparison (trim and lowercase)
-            const normalizedCustomerState = customerState.trim().toLowerCase();
-            const normalizedSellerState = sellerState.trim().toLowerCase();
+            // Function to normalize state names
+            function normalizeStateName(state) {
+                if (!state) return '';
+                const normalized = state.trim().toLowerCase().replace(/\s+/g, '');
+                
+                // Handle Pondicherry/Puducherry variations
+                if (normalized === 'pondicherry' || normalized === 'puducherry') {
+                    return 'puducherry';
+                }
+                
+                // Handle Tamil Nadu variations (with or without space)
+                if (normalized === 'tamilnadu' || normalized === 'tamil nadu') {
+                    return 'tamilnadu';
+                }
+                
+                return normalized;
+            }
             
-            if (normalizedCustomerState && normalizedSellerState &&
-                normalizedCustomerState === normalizedSellerState) {
-                // Same state (Intra-state): Split GST into CGST and SGST
+            const normalizedCustomerState = normalizeStateName(customerState);
+            
+            // GST calculation based on customer state only
+            if (normalizedCustomerState === 'puducherry') {
+                // Puducherry: Split GST into CGST and SGST
                 cgst = item.gst_amount / 2;
                 sgst = item.gst_amount / 2;
             } else {
-                // Different state (Inter-state): Use IGST
+                // Tamil Nadu or any other state: Use IGST
                 igst = item.gst_amount;
             }
             
