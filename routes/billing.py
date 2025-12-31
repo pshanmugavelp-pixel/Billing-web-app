@@ -439,7 +439,7 @@ def view(id):
         LEFT JOIN inventory i ON bi.product_id = i.id
         WHERE bi.bill_id = ?
         ORDER BY bi.id
-    ''', (id,)).fetchall()
+    ''', (bill_dict['bill_id'],)).fetchall()
     
     # Get seller information
     seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
@@ -476,7 +476,7 @@ def print_bill(id):
         LEFT JOIN inventory i ON bi.product_id = i.id
         WHERE bi.bill_id = ?
         ORDER BY bi.id
-    ''', (id,)).fetchall()
+    ''', (bill_dict['bill_id'],)).fetchall()
     
     # Get seller information
     seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
