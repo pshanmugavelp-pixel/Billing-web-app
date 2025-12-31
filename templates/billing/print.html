@@ -31,10 +31,29 @@
         }
         
         .header {
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 5mm;
             padding-bottom: 3mm;
             border-bottom: 2px solid #1e3a8a;
+        }
+        
+        .logo-section {
+            width: 20mm;
+            height: 20mm;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7px;
+            color: #999;
+            text-align: center;
+        }
+        
+        .header-content {
+            flex: 1;
+            text-align: center;
         }
         
         .header h1 {
@@ -53,6 +72,11 @@
             line-height: 1.4;
         }
         
+        .seal-placeholder {
+            width: 20mm;
+            height: 20mm;
+        }
+        
         .invoice-title {
             text-align: center;
             font-size: 12px;
@@ -68,13 +92,14 @@
         }
         
         table th {
-            background: #1e3a8a;
-            color: white;
+            background: white;
+            color: #1e3a8a;
             padding: 2mm;
             text-align: left;
             font-size: 8px;
             font-weight: bold;
-            border: 1px solid #1e3a8a;
+            border: 1px solid #ddd;
+            border-bottom: 2px solid #1e3a8a;
         }
         
         table td {
@@ -132,9 +157,42 @@
             font-weight: bold;
         }
         
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8mm;
+            padding-top: 3mm;
+        }
+        
+        .signature-box {
+            width: 45%;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 15mm;
+            padding-top: 2mm;
+            font-size: 8px;
+            color: #000;
+        }
+        
+        .seal-section {
+            width: 25mm;
+            height: 25mm;
+            border: 2px dashed #1e3a8a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2mm auto;
+            font-size: 7px;
+            color: #999;
+            text-align: center;
+        }
+        
         .footer {
             text-align: center;
-            margin-top: 5mm;
+            margin-top: 3mm;
             padding-top: 3mm;
             border-top: 1px solid #ddd;
             font-size: 7px;
@@ -176,14 +234,20 @@
     <div class="invoice">
         <!-- Header -->
         <div class="header">
-            {% if seller %}
-            <h1>{{ seller['seller_name'] }}</h1>
-            <div class="header-info">
-                {{ seller['address'] }}<br>
-                Email: {{ seller['email'] }} | Mobile: {{ seller['mobile'] }}<br>
-                GST: {{ seller['gst_number'] }}
+            <div class="logo-section">
+                LOGO
             </div>
-            {% endif %}
+            <div class="header-content">
+                {% if seller %}
+                <h1>{{ seller['seller_name'] }}</h1>
+                <div class="header-info">
+                    {{ seller['address'] }}<br>
+                    Email: {{ seller['email'] }} | Mobile: {{ seller['mobile'] }}<br>
+                    GST: {{ seller['gst_number'] }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="seal-placeholder"></div>
         </div>
         
         <div class="invoice-title">TAX INVOICE</div>
@@ -316,6 +380,23 @@
             </table>
         </div>
         {% endif %}
+        
+        <!-- Signature and Seal Section -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-line">
+                    <strong>Customer Signature</strong>
+                </div>
+            </div>
+            <div class="signature-box">
+                <div class="seal-section">
+                    Company<br>Seal
+                </div>
+                <div class="signature-line">
+                    <strong>Authorized Signature</strong>
+                </div>
+            </div>
+        </div>
         
         <div class="footer">
             <p>This is a computer-generated invoice. Thank you for your business!</p>
