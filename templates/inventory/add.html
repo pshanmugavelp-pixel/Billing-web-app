@@ -141,6 +141,24 @@
         }
     </style>
     <script>
+        // Auto-generate product ID on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fetch the next product ID from the server
+            fetch('/inventory/api/next-product-id')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('product_id').value = data.product_id;
+                })
+                .catch(error => {
+                    console.error('Error fetching product ID:', error);
+                    // Fallback to timestamp-based ID
+                    document.getElementById('product_id').value = 'PROD' + Date.now();
+                });
+            
+            document.getElementById('manufacture_date').addEventListener('change', calculateExpiryDate);
+            document.getElementById('expiry_months').addEventListener('input', calculateExpiryDate);
+        });
+        
         function calculateExpiryDate() {
             const manufactureDate = document.getElementById('manufacture_date').value;
             const expiryMonths = parseInt(document.getElementById('expiry_months').value);
@@ -159,11 +177,6 @@
             }
         }
         
-        // Add event listeners when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('manufacture_date').addEventListener('change', calculateExpiryDate);
-            document.getElementById('expiry_months').addEventListener('input', calculateExpiryDate);
-        });
     </script>
 </head>
 <body>
@@ -188,9 +201,9 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="product_id">Product ID <span class="required">*</span></label>
-                    <input type="text" id="product_id" name="product_id" required
-                           placeholder="Enter unique product ID">
-                    <div class="help-text">Unique identifier for the product</div>
+                    <input type="text" id="product_id" name="product_id" required readonly
+                           style="background: #f0f0f0;" placeholder="Auto-generated">
+                    <div class="help-text">Auto-generated unique identifier</div>
                 </div>
                 
                 <div class="form-group">
@@ -202,8 +215,8 @@
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="hsn_code">HSN Code</label>
-                    <input type="text" id="hsn_code" name="hsn_code"
+                    <label for="hsn_code">HSN Code <span class="required">*</span></label>
+                    <input type="text" id="hsn_code" name="hsn_code" required
                            placeholder="Enter HSN code">
                     <div class="help-text">Harmonized System of Nomenclature code</div>
                 </div>

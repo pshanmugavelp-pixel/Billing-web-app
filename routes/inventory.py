@@ -18,13 +18,57 @@ def index():
     conn.close()
     return render_template('inventory/index.html', items=items)
 
+@inventory_bp.route('/api/next-product-id')
+def next_product_id():
+    """API endpoint to get the next auto-generated product ID"""
+    conn = get_db_connection()
+    
+    # Get the last product_id
+    last_product = conn.execute('SELECT product_id FROM inventory ORDER BY id DESC LIMIT 1').fetchone()
+    
+    if last_product and last_product['product_id']:
+        # Extract number from last product_id (e.g., PROD0001 -> 1)
+        try:
+            last_num = int(last_product['product_id'].replace('PROD', ''))
+            next_num = last_num + 1
+        except (ValueError, AttributeError):
+            next_num = 1
+    else:
+        next_num = 1
+    
+    # Format as PROD0001, PROD0002, etc.
+    product_id = f'PROD{next_num:04d}'
+    
+    conn.close()
+    
+    from flask import jsonify
+    return jsonify({'product_id': product_id})
+
 @inventory_bp.route('/add', methods=['GET', 'POST'])
 def add():
     """Add a new inventory item"""
     if request.method == 'POST':
-        product_id = request.form['product_id']
+        product_id = request.form.get('product_id', '').strip()
+        
+        # Auto-generate product_id if not provided or empty
+        if not product_id:
+            conn = get_db_connection()
+            last_product = conn.execute('SELECT product_id FROM inventory ORDER BY id DESC LIMIT 1').fetchone()
+            
+            if last_product and last_product['product_id']:
+                try:
+                    last_num = int(last_product['product_id'].replace('PROD', ''))
+                    next_num = last_num + 1
+                except (ValueError, AttributeError):
+                    next_num = 1
+            else:
+                next_num = 1
+            
+            product_id = f'PROD{next_num:04d}'
+            conn.close()
+        
         product_name = request.form['product_name']
-        hsn_code = request.form.get('hsn_code', '')
+        hsn_code = request.form.get('hsn_code', '').strip()
         manufacture_date = request.form.get('manufacture_date', '')
         expiry_months = request.form.get('expiry_months', 0)
         quantity = request.form.get('quantity', 0)
@@ -44,8 +88,8 @@ def add():
                 flash('Invalid manufacture date or expiry months!', 'error')
                 return redirect(url_for('inventory.add'))
         
-        if not product_id or not product_name or not manufacture_date or not expiry_months:
-            flash('Product ID, Product Name, Manufacture Date, and Expiry Months are required!', 'error')
+        if not product_id or not product_name or not hsn_code or not manufacture_date or not expiry_months:
+            flash('Product ID, Product Name, HSN Code, Manufacture Date, and Expiry Months are required!', 'error')
             return redirect(url_for('inventory.add'))
         
         conn = get_db_connection()
@@ -105,7 +149,7 @@ def update(id):
     if request.method == 'POST':
         product_id = request.form['product_id']
         product_name = request.form['product_name']
-        hsn_code = request.form.get('hsn_code', '')
+        hsn_code = request.form.get('hsn_code', '').strip()
         manufacture_date = request.form.get('manufacture_date', '')
         expiry_months = request.form.get('expiry_months', 0)
         quantity = request.form.get('quantity', 0)
@@ -126,8 +170,8 @@ def update(id):
                 conn.close()
                 return redirect(url_for('inventory.update', id=id))
         
-        if not product_id or not product_name or not manufacture_date or not expiry_months:
-            flash('Product ID, Product Name, Manufacture Date, and Expiry Months are required!', 'error')
+        if not product_id or not product_name or not hsn_code or not manufacture_date or not expiry_months:
+            flash('Product ID, Product Name, HSN Code, Manufacture Date, and Expiry Months are required!', 'error')
             conn.close()
             return redirect(url_for('inventory.update', id=id))
         

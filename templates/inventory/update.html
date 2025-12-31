@@ -222,8 +222,8 @@
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="hsn_code">HSN Code</label>
-                    <input type="text" id="hsn_code" name="hsn_code"
+                    <label for="hsn_code">HSN Code <span class="required">*</span></label>
+                    <input type="text" id="hsn_code" name="hsn_code" required
                            value="{{ item['hsn_code'] or '' }}"
                            placeholder="Enter HSN code">
                     <div class="help-text">Harmonized System of Nomenclature code</div>
