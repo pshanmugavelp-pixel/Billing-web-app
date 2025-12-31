@@ -483,6 +483,75 @@ def print_bill(id):
     
     conn.close()
     return render_template('billing/print.html', bill=bill_dict, items=items, seller=seller)
+@billing_bp.route('/print-multiple')
+def print_multiple():
+    """Print multiple bills in a single printable page"""
+    bill_ids_str = request.args.get('bill_ids', '')
+    
+    if not bill_ids_str:
+        flash('No bills selected for printing!', 'error')
+        return redirect(url_for('billing.index'))
+    
+    # Parse bill IDs
+    try:
+        bill_ids = [int(bid.strip()) for bid in bill_ids_str.split(',') if bid.strip()]
+    except ValueError:
+        flash('Invalid bill IDs!', 'error')
+        return redirect(url_for('billing.index'))
+    
+    if not bill_ids:
+        flash('No valid bills selected!', 'error')
+        return redirect(url_for('billing.index'))
+    
+    conn = get_db_connection()
+    
+    # Get seller information (same for all bills)
+    seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+    
+    # Collect all bills data
+    bills_data = []
+    
+    for bill_id in bill_ids:
+        # Get bill details
+        bill = conn.execute('''
+            SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
+            FROM billing b
+            JOIN customers c ON b.customer_id = c.id
+            WHERE b.id = ?
+        ''', (bill_id,)).fetchone()
+        
+        if not bill:
+            continue
+        
+        # Convert bill to dict and format date
+        bill_dict = dict(bill)
+        if bill_dict['bill_date']:
+            # Convert YYYY-MM-DD to DD-MM-YYYY
+            date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
+            bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+        
+        # Get bill items
+        items = conn.execute('''
+            SELECT bi.*, i.product_id as inventory_product_id
+            FROM billing_items bi
+            LEFT JOIN inventory i ON bi.product_id = i.id
+            WHERE bi.bill_id = ?
+            ORDER BY bi.id
+        ''', (bill_id,)).fetchall()
+        
+        bills_data.append({
+            'bill': bill_dict,
+            'items': items
+        })
+    
+    conn.close()
+    
+    if not bills_data:
+        flash('No valid bills found for printing!', 'error')
+        return redirect(url_for('billing.index'))
+    
+    return render_template('billing/print_multiple.html', bills_data=bills_data, seller=seller)
+
 
 @billing_bp.route('/update/<int:bill_id>', methods=['GET', 'POST'])
 def update(bill_id):

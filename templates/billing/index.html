@@ -103,6 +103,16 @@
             background: #c0392b;
         }
         
+        .btn-print-selected {
+            background: #17a2b8;
+            color: white;
+            display: none;
+        }
+        
+        .btn-print-selected:hover {
+            background: #138496;
+        }
+        
         .btn-success {
             background: #27ae60;
             color: white;
@@ -265,6 +275,7 @@
             <div class="button-group">
                 {% if not show_cancelled %}
                 <button id="cancelSelectedBtn" class="btn btn-cancel-selected no-print" onclick="cancelSelected()">Cancel Selected Bills</button>
+                <button id="printSelectedBtn" class="btn btn-print-selected no-print" onclick="printSelected()">🖨️ Print Selected</button>
                 {% endif %}
                 {% if show_cancelled %}
                 <a href="{{ url_for('billing.index') }}" class="btn btn-info no-print">📋 View Active Bills</a>
@@ -273,7 +284,6 @@
                 {% endif %}
                 <a href="{{ url_for('billing.active_bills_export') }}" class="btn btn-success no-print" style="background: #16a085;">📊 Export Active Bills</a>
                 <button onclick="downloadExcel()" class="btn btn-success no-print">📥 Download Excel</button>
-                <button onclick="window.print()" class="btn btn-info no-print">🖨️ Print</button>
                 <a href="{{ url_for('billing.create') }}" class="btn btn-primary no-print">+ Create Bill</a>
                 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary no-print">← Back to Dashboard</a>
             </div>
@@ -367,6 +377,7 @@
             const checkboxes = document.querySelectorAll('.bill-checkbox:checked');
             const count = checkboxes.length;
             const cancelBtn = document.getElementById('cancelSelectedBtn');
+            const printBtn = document.getElementById('printSelectedBtn');
             const selectionInfo = document.getElementById('selectionInfo');
             const selectedCount = document.getElementById('selectedCount');
             const selectAll = document.getElementById('selectAll');
@@ -375,9 +386,11 @@
             
             if (count > 0) {
                 cancelBtn.style.display = 'inline-block';
+                printBtn.style.display = 'inline-block';
                 selectionInfo.classList.add('show');
             } else {
                 cancelBtn.style.display = 'none';
+                printBtn.style.display = 'none';
                 selectionInfo.classList.remove('show');
             }
             
@@ -395,6 +408,21 @@
             
             // Submit form to show confirmation page
             document.getElementById('cancelForm').submit();
+        }
+        
+        function printSelected() {
+            const checkboxes = document.querySelectorAll('.bill-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('Please select at least one bill to print.');
+                return;
+            }
+            
+            // Collect selected bill IDs
+            const billIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            // Open print page in new window with selected bill IDs
+            const url = "{{ url_for('billing.print_multiple') }}" + '?bill_ids=' + billIds.join(',');
+            window.open(url, '_blank');
         }
         
         function downloadExcel() {
