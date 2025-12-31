@@ -420,6 +420,7 @@
                     product_id: item.product_id,
                     product_name: item.product_name,
                     quantity: item.quantity,
+                    original_quantity: item.quantity,  // Store original quantity
                     unit_price: item.unit_price,
                     subtotal: subtotal,
                     gst_percentage: item.gst_percentage,
@@ -490,7 +491,7 @@
             }
             
             itemsList.innerHTML = billItems.map((item, index) => {
-                const originalQty = existingItems[index] ? existingItems[index].quantity : item.quantity;
+                const originalQty = item.original_quantity || item.quantity;
                 const qtyChange = item.quantity - originalQty;
                 const changeIndicator = qtyChange > 0 ? `<span style="color: #27ae60; font-weight: bold; margin-left: 8px;">+${qtyChange}</span>` :
                                        qtyChange < 0 ? `<span style="color: #e74c3c; font-weight: bold; margin-left: 8px;">${qtyChange}</span>` :
