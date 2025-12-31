@@ -266,10 +266,10 @@
                     </thead>
                     <tbody>
                         {% for bill_data in bills_with_items %}
-                            {% set bill = bill_data.bill %}
-                            {% set items = bill_data.items %}
-                            {% if items %}
-                                {% for item in items %}
+                            {% set bill = bill_data['bill'] %}
+                            {% set bill_items = bill_data['items'] %}
+                            {% if bill_items %}
+                                {% for item in bill_items %}
                                 <tr class="item-row">
                                     <td>{{ bill.bill_id }}</td>
                                     <td>{{ bill.bill_date }}</td>
