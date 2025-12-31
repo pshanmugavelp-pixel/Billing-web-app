@@ -24,10 +24,9 @@ def index():
 def add():
     """Add a new purchase"""
     if request.method == 'POST':
-        product_id = request.form['product_id'].strip()
         product_name = request.form['product_name'].strip()
         hsn_code = request.form.get('hsn_code', '').strip()
-        manufacture_date = request.form.get('manufacture_date', '')
+        manufacture_date = request.form['manufacture_date']  # Required now
         expiry_month = request.form['expiry_month'].strip()
         quantity = int(request.form['quantity'])
         buy_price = float(request.form['buy_price'])
@@ -36,23 +35,22 @@ def add():
         gst_percentage = float(request.form['gst_percentage'])
         purchase_date = request.form['purchase_date']
         
-        if not product_id or not product_name or not expiry_month or quantity <= 0:
+        if not product_name or not manufacture_date or not expiry_month or quantity <= 0:
             flash('Please fill in all required fields with valid values!', 'error')
             return redirect(url_for('purchases.add'))
         
         conn = get_db_connection()
         
-        # Check if product exists in inventory
+        # Check if product exists in inventory by product_name AND manufacture_date
         existing_product = conn.execute(
-            'SELECT * FROM inventory WHERE product_id = ?', 
-            (product_id,)
+            'SELECT * FROM inventory WHERE product_name = ? AND manufacture_date = ?',
+            (product_name, manufacture_date)
         ).fetchone()
         
         if existing_product:
             # Show confirmation page with inventory update details
             conn.close()
             return render_template('purchases/add_confirm.html',
-                                 product_id=product_id,
                                  product_name=product_name,
                                  hsn_code=hsn_code,
                                  manufacture_date=manufacture_date,
@@ -65,8 +63,21 @@ def add():
                                  purchase_date=purchase_date,
                                  existing_product=dict(existing_product))
         else:
-            # Product doesn't exist, add to both purchases and inventory
+            # Product doesn't exist, generate product_id and add to both tables
             try:
+                # Generate auto product_id
+                last_product = conn.execute('SELECT product_id FROM inventory ORDER BY id DESC LIMIT 1').fetchone()
+                if last_product and last_product['product_id']:
+                    try:
+                        # Extract number from last product_id (e.g., P001 -> 1)
+                        last_num = int(last_product['product_id'][1:])
+                        next_num = last_num + 1
+                    except (ValueError, IndexError):
+                        next_num = 1
+                else:
+                    next_num = 1
+                product_id = f'P{next_num:03d}'  # Format as P001, P002, etc.
+                
                 # Add to purchases table
                 conn.execute('''
                     INSERT INTO purchases (product_id, product_name, hsn_code, manufacture_date,
@@ -86,7 +97,7 @@ def add():
                       quantity, buy_price, unit_price, mrp, gst_percentage))
                 
                 conn.commit()
-                flash(f'New product "{product_name}" added to inventory with {quantity} units!', 'success')
+                flash(f'New product "{product_name}" (ID: {product_id}) added to inventory with {quantity} units!', 'success')
             except Exception as e:
                 conn.rollback()
                 flash(f'Error adding purchase: {str(e)}', 'error')
@@ -101,10 +112,10 @@ def add():
 @purchases_bp.route('/confirm-add', methods=['POST'])
 def confirm_add():
     """Confirm and process purchase with inventory update"""
-    product_id = request.form['product_id']
+    existing_product_id = request.form['existing_product_id']
     product_name = request.form['product_name']
     hsn_code = request.form.get('hsn_code', '')
-    manufacture_date = request.form.get('manufacture_date', '')
+    manufacture_date = request.form['manufacture_date']
     expiry_month = request.form['expiry_month']
     quantity = int(request.form['quantity'])
     buy_price = float(request.form['buy_price'])
@@ -116,22 +127,22 @@ def confirm_add():
     conn = get_db_connection()
     
     try:
-        # Add to purchases table
+        # Add to purchases table (use existing product_id)
         conn.execute('''
             INSERT INTO purchases (product_id, product_name, hsn_code, manufacture_date,
                                  expiry_month, quantity, buy_price, unit_price, mrp,
                                  gst_percentage, purchase_date)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (product_id, product_name, hsn_code, manufacture_date, expiry_month,
+        ''', (existing_product_id, product_name, hsn_code, manufacture_date, expiry_month,
               quantity, buy_price, unit_price, mrp, gst_percentage, purchase_date))
         
-        # Update inventory quantity
+        # Update inventory quantity by product_name and manufacture_date
         conn.execute('''
-            UPDATE inventory 
+            UPDATE inventory
             SET quantity = quantity + ?,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE product_id = ?
-        ''', (quantity, product_id))
+            WHERE product_name = ? AND manufacture_date = ?
+        ''', (quantity, product_name, manufacture_date))
         
         conn.commit()
         flash(f'Purchase recorded! Added {quantity} units of "{product_name}" to inventory.', 'success')

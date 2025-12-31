@@ -229,7 +229,7 @@
                 <div class="warning-text">
                     <h2>Product Found in Inventory</h2>
                     <p>
-                        This product ID already exists in your inventory. Confirming this purchase will add the new quantity to the existing stock.
+                        A product with the same name and manufacture date already exists in your inventory. Confirming this purchase will add the new quantity to the existing stock.
                         Please review the details below before proceeding.
                     </p>
                 </div>
@@ -239,20 +239,24 @@
                 <h3>📦 Purchase Details</h3>
                 <div class="info-grid">
                     <div class="info-item">
-                        <span class="info-label">Product ID</span>
-                        <span class="info-value">{{ product_id }}</span>
+                        <span class="info-label">Product ID (Existing)</span>
+                        <span class="info-value">{{ existing_product.product_id }}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Product Name</span>
                         <span class="info-value">{{ product_name }}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">HSN Code</span>
-                        <span class="info-value">{{ hsn_code or 'N/A' }}</span>
+                        <span class="info-label">Manufacture Date</span>
+                        <span class="info-value">{{ manufacture_date }}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Expiry Month</span>
                         <span class="info-value">{{ expiry_month }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">HSN Code</span>
+                        <span class="info-value">{{ hsn_code or 'N/A' }}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Purchase Quantity</span>
@@ -306,7 +310,7 @@
 
             <form method="POST" action="{{ url_for('purchases.confirm_add') }}">
                 <!-- Hidden fields to preserve form data -->
-                <input type="hidden" name="product_id" value="{{ product_id }}">
+                <input type="hidden" name="existing_product_id" value="{{ existing_product.product_id }}">
                 <input type="hidden" name="product_name" value="{{ product_name }}">
                 <input type="hidden" name="hsn_code" value="{{ hsn_code }}">
                 <input type="hidden" name="manufacture_date" value="{{ manufacture_date }}">
