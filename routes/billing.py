@@ -95,12 +95,15 @@ def create():
                             (bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
                              payment_status, notes))
         
-        # Insert bill items and update inventory (use bill_id text, not lastrowid)
+        # Get the auto-generated numeric ID for the bill
+        new_bill_id = cursor.lastrowid
+        
+        # Insert bill items and update inventory (use numeric bill ID)
         for item in items:
             conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
                            unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (bill_id, item['product_id'], item['product_name'], item['quantity'],
+                        (new_bill_id, item['product_id'], item['product_name'], item['quantity'],
                          item['unit_price'], item['gst_percentage'],
                          item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
                          item.get('igst', 0), item['total']))
@@ -260,7 +263,7 @@ def view(id):
         LEFT JOIN inventory i ON bi.product_id = i.id
         WHERE bi.bill_id = ?
         ORDER BY bi.id
-    ''', (bill['bill_id'],)).fetchall()
+    ''', (id,)).fetchall()
     
     # Get seller information
     seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
@@ -346,16 +349,17 @@ def update(bill_id):
                      payment_status, notes, bill_id))
         
         # Delete old bill items
-        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
+        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id,))
         
-        # Insert new bill items with new bill_id text and update inventory
+        # Insert new bill items with numeric bill_id and update inventory
         for item in items:
             conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
-                           unit_price, gst_percentage, gst_amount, total)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (new_bill_id, item['product_id'], item['product_name'], item['quantity'],
+                           unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (bill_id, item['product_id'], item['product_name'], item['quantity'],
                          item['unit_price'], item['gst_percentage'],
-                         item['gst_amount'], item['total']))
+                         item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                         item.get('igst', 0), item['total']))
             
             # Reduce inventory
             conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
