@@ -799,12 +799,14 @@ def active_bills_export():
             LEFT JOIN inventory i ON bi.product_id = i.id
             WHERE bi.bill_id = ?
             ORDER BY bi.id
-        ''', (bill['id'],)).fetchall()
+        ''', (bill['bill_id'],)).fetchall()
         
-        bills_with_items.append({
-            'bill': dict(bill),
-            'items': [dict(item) for item in items]
-        })
+        # Only add bills that have items
+        if items:
+            bills_with_items.append({
+                'bill': dict(bill),
+                'items': [dict(item) for item in items]
+            })
     
     conn.close()
     return render_template('billing/active_bills_export.html', bills_with_items=bills_with_items)
