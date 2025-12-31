@@ -192,11 +192,13 @@ def reset_table(table_name):
             conn.execute('''
                 CREATE TABLE inventory (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id TEXT UNIQUE NOT NULL,
                     product_name TEXT NOT NULL,
                     hsn_code TEXT,
                     manufacture_date DATE,
-                    expiry_month TEXT,
+                    expiry_month TEXT NOT NULL,
                     quantity INTEGER NOT NULL DEFAULT 0,
+                    buy_price REAL NOT NULL DEFAULT 0.0,
                     unit_price REAL NOT NULL DEFAULT 0.0,
                     mrp REAL NOT NULL DEFAULT 0.0,
                     gst_percentage REAL NOT NULL DEFAULT 0.0,
@@ -208,8 +210,11 @@ def reset_table(table_name):
             conn.execute('''
                 CREATE TABLE billing (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    bill_id TEXT UNIQUE NOT NULL,
                     customer_id INTEGER NOT NULL,
                     bill_date DATE NOT NULL,
+                    subtotal REAL DEFAULT 0.0,
+                    gst_amount REAL DEFAULT 0.0,
                     total_amount REAL NOT NULL DEFAULT 0.0,
                     payment_status TEXT DEFAULT 'Pending',
                     payment_method TEXT,
@@ -222,13 +227,38 @@ def reset_table(table_name):
             conn.execute('''
                 CREATE TABLE billing_items (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    billing_id INTEGER NOT NULL,
-                    item_id INTEGER NOT NULL,
-                    quantity INTEGER NOT NULL,
-                    unit_price REAL NOT NULL,
-                    total_price REAL NOT NULL,
-                    FOREIGN KEY (billing_id) REFERENCES billing (id),
-                    FOREIGN KEY (item_id) REFERENCES inventory (id)
+                    bill_id INTEGER NOT NULL,
+                    product_id INTEGER NOT NULL,
+                    product_name TEXT NOT NULL,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    unit_price REAL NOT NULL DEFAULT 0.0,
+                    subtotal REAL NOT NULL DEFAULT 0.0,
+                    gst_percentage REAL NOT NULL DEFAULT 0.0,
+                    gst_amount REAL NOT NULL DEFAULT 0.0,
+                    cgst REAL NOT NULL DEFAULT 0.0,
+                    sgst REAL NOT NULL DEFAULT 0.0,
+                    igst REAL NOT NULL DEFAULT 0.0,
+                    total REAL NOT NULL DEFAULT 0.0,
+                    FOREIGN KEY (bill_id) REFERENCES billing (id) ON DELETE CASCADE,
+                    FOREIGN KEY (product_id) REFERENCES inventory (id)
+                )
+            ''')
+        elif table_name == 'seller_info':
+            conn.execute('''
+                CREATE TABLE seller_info (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    seller_name TEXT NOT NULL,
+                    address TEXT,
+                    email TEXT,
+                    mobile TEXT,
+                    gst_number TEXT,
+                    account_name TEXT,
+                    account_number TEXT,
+                    ifsc_code TEXT,
+                    account_type TEXT,
+                    branch TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
         
