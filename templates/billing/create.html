@@ -369,7 +369,7 @@
                         <select id="product_select">
                             <option value="">-- Select Product --</option>
                             {% for product in inventory %}
-                            <option value="{{ product['id'] }}">{{ product['product_id'] }} - {{ product['product_name'] }} (Stock: {{ product['quantity'] }})</option>
+                            <option value="{{ product['id'] }}">{{ product['product_id'] }} - {{ product['product_name'] }} | Mfg: {{ product['manufacture_date'] or 'N/A' }} | Stock: {{ product['quantity'] }}</option>
                             {% endfor %}
                         </select>
                     </div>
