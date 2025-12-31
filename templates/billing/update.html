@@ -288,6 +288,17 @@
         {% endwith %}
         
         <form method="POST" action="{{ url_for('billing.update', bill_id=bill['id']) }}" id="billForm">
+            <!-- Bill ID Section -->
+            <div class="section">
+                <h2>Bill ID</h2>
+                
+                <div class="form-group">
+                    <label for="bill_id">Bill ID <span class="required">*</span></label>
+                    <input type="text" name="bill_id" id="bill_id" value="{{ bill['bill_id'] }}" required>
+                    <div class="help-text">You can modify the bill ID if needed. Must be unique.</div>
+                </div>
+            </div>
+            
             <!-- Customer Selection Section -->
             <div class="section">
                 <h2>Customer Selection</h2>

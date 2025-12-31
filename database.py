@@ -56,6 +56,7 @@ def init_db():
     conn.execute('''
         CREATE TABLE IF NOT EXISTS billing (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bill_id TEXT UNIQUE NOT NULL,
             customer_id INTEGER NOT NULL,
             bill_date DATE NOT NULL,
             subtotal REAL DEFAULT 0.0,
@@ -68,6 +69,23 @@ def init_db():
             FOREIGN KEY (customer_id) REFERENCES customers (id)
         )
     ''')
+    
+    # Add bill_id column to existing billing table if it doesn't exist
+    try:
+        conn.execute('SELECT bill_id FROM billing LIMIT 1')
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it
+        conn.execute('ALTER TABLE billing ADD COLUMN bill_id TEXT')
+        # Generate bill_ids for existing records
+        existing_bills = conn.execute('SELECT id FROM billing ORDER BY id').fetchall()
+        for idx, bill in enumerate(existing_bills, start=1):
+            bill_id = f'ST{idx}'
+            conn.execute('UPDATE billing SET bill_id = ? WHERE id = ?', (bill_id, bill['id']))
+        # Make bill_id unique after populating
+        conn.execute('''
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_bill_id ON billing(bill_id)
+        ''')
+        conn.commit()
     
     # Billing items table (line items - multiple per bill)
     conn.execute('''

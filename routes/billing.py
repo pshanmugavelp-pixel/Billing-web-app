@@ -28,11 +28,35 @@ def create():
     conn = get_db_connection()
     
     if request.method == 'POST':
+        bill_id = request.form.get('bill_id', '').strip()
+        bill_id_mode = request.form.get('bill_id_mode', 'auto')
         customer_id = request.form['customer_id']
         bill_date = request.form['bill_date']
         payment_status = request.form.get('payment_status', 'Pending')
         payment_method = request.form.get('payment_method', '')
         notes = request.form.get('notes', '')
+        
+        # Handle bill_id generation
+        if bill_id_mode == 'auto' or not bill_id:
+            # Auto-generate bill_id in format ST###
+            last_bill = conn.execute('SELECT bill_id FROM billing ORDER BY id DESC LIMIT 1').fetchone()
+            if last_bill and last_bill['bill_id']:
+                # Extract number from last bill_id (e.g., ST486 -> 486)
+                try:
+                    last_num = int(last_bill['bill_id'][2:])  # Skip 'ST' prefix
+                    next_num = last_num + 1
+                except (ValueError, IndexError):
+                    next_num = 1
+            else:
+                next_num = 1
+            bill_id = f'ST{next_num}'
+        else:
+            # Manual mode - validate uniqueness
+            existing = conn.execute('SELECT id FROM billing WHERE bill_id = ?', (bill_id,)).fetchone()
+            if existing:
+                flash(f'Bill ID "{bill_id}" already exists! Please use a different ID.', 'error')
+                conn.close()
+                return redirect(url_for('billing.create'))
         
         # Get items data (sent as JSON)
         import json
@@ -65,10 +89,10 @@ def create():
         total_amount = sum(float(item['total']) for item in items)
         
         # Insert bill header
-        cursor = conn.execute('''INSERT INTO billing (customer_id, bill_date, subtotal, gst_amount, 
+        cursor = conn.execute('''INSERT INTO billing (bill_id, customer_id, bill_date, subtotal, gst_amount,
                                 total_amount, payment_status, payment_method, notes)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (customer_id, bill_date, subtotal, gst_amount, total_amount,
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
                              payment_status, payment_method, notes))
         bill_id = cursor.lastrowid
         
@@ -88,7 +112,7 @@ def create():
         conn.commit()
         conn.close()
         
-        flash(f'Bill created successfully with {len(items)} item(s)! Inventory updated.', 'success')
+        flash(f'Bill {bill_id} created successfully with {len(items)} item(s)! Inventory updated.', 'success')
         return redirect(url_for('billing.index'))
     
     # Convert Row objects to dictionaries for JSON serialization
@@ -220,11 +244,22 @@ def update(bill_id):
     conn = get_db_connection()
     
     if request.method == 'POST':
+        new_bill_id = request.form.get('bill_id', '').strip()
         customer_id = request.form['customer_id']
         bill_date = request.form['bill_date']
         payment_status = request.form.get('payment_status', 'Pending')
         payment_method = request.form.get('payment_method', '')
         notes = request.form.get('notes', '')
+        
+        # Validate bill_id uniqueness (if changed)
+        current_bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_id,)).fetchone()
+        if new_bill_id != current_bill['bill_id']:
+            existing = conn.execute('SELECT id FROM billing WHERE bill_id = ? AND id != ?',
+                                   (new_bill_id, bill_id)).fetchone()
+            if existing:
+                flash(f'Bill ID "{new_bill_id}" already exists! Please use a different ID.', 'error')
+                conn.close()
+                return redirect(url_for('billing.update', bill_id=bill_id))
         
         # Get items data (sent as JSON)
         import json
@@ -271,10 +306,10 @@ def update(bill_id):
         total_amount = sum(float(item['total']) for item in items)
         
         # Update bill header
-        conn.execute('''UPDATE billing SET customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
+        conn.execute('''UPDATE billing SET bill_id = ?, customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
                        total_amount = ?, payment_status = ?, payment_method = ?, notes = ?
                        WHERE id = ?''',
-                    (customer_id, bill_date, subtotal, gst_amount, total_amount,
+                    (new_bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
                      payment_status, payment_method, notes, bill_id))
         
         # Delete old bill items
@@ -296,7 +331,7 @@ def update(bill_id):
         conn.commit()
         conn.close()
         
-        flash(f'Bill updated successfully with {len(items)} item(s)! Inventory updated.', 'success')
+        flash(f'Bill {new_bill_id} updated successfully with {len(items)} item(s)! Inventory updated.', 'success')
         return redirect(url_for('billing.index'))
     
     # GET request - load bill for editing
