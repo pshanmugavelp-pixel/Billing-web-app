@@ -238,18 +238,25 @@
         
         <div class="section">
             <div class="section-title">ITEMS</div>
+            {% set has_igst = items|selectattr('igst', 'greaterthan', 0)|list|length > 0 %}
+            {% set has_cgst_sgst = items|selectattr('cgst', 'greaterthan', 0)|list|length > 0 %}
             <table>
                 <thead>
                     <tr>
                         <th style="width: 5%;">#</th>
                         <th style="width: 10%;">Prod ID</th>
-                        <th style="width: 25%;">Product Name</th>
+                        <th style="width: 30%;">Product Name</th>
                         <th style="width: 8%;" class="text-center">Qty</th>
                         <th style="width: 12%;" class="text-right">Unit Price</th>
                         <th style="width: 12%;" class="text-right">Tax Value</th>
+                        {% if has_cgst_sgst %}
                         <th style="width: 10%;" class="text-right">CGST</th>
                         <th style="width: 10%;" class="text-right">SGST</th>
-                        <th style="width: 12%;" class="text-right">Total</th>
+                        {% endif %}
+                        {% if has_igst %}
+                        <th style="width: 10%;" class="text-right">IGST</th>
+                        {% endif %}
+                        <th style="width: 13%;" class="text-right">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -262,6 +269,7 @@
                         <td class="text-center">{{ item['quantity'] }}</td>
                         <td class="text-right">₹{{ "%.2f"|format(item['unit_price']) }}</td>
                         <td class="text-right">₹{{ "%.2f"|format(item_subtotal) }}</td>
+                        {% if has_cgst_sgst %}
                         <td class="text-right">
                             {% if item['cgst'] > 0 %}
                             {{ "%.1f"|format(item['gst_percentage'] / 2) }}%<br>₹{{ "%.2f"|format(item['cgst']) }}
@@ -276,6 +284,16 @@
                             -
                             {% endif %}
                         </td>
+                        {% endif %}
+                        {% if has_igst %}
+                        <td class="text-right">
+                            {% if item['igst'] > 0 %}
+                            {{ "%.1f"|format(item['gst_percentage']) }}%<br>₹{{ "%.2f"|format(item['igst']) }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        {% endif %}
                         <td class="text-right"><strong>₹{{ "%.2f"|format(item['total']) }}</strong></td>
                     </tr>
                     {% endfor %}

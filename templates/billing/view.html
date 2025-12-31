@@ -310,6 +310,8 @@
         
         <!-- Bill Items -->
         <h2>Bill Items</h2>
+        {% set has_igst = items|selectattr('igst', 'greaterthan', 0)|list|length > 0 %}
+        {% set has_cgst_sgst = items|selectattr('cgst', 'greaterthan', 0)|list|length > 0 %}
         <table>
             <thead>
                 <tr>
@@ -319,9 +321,13 @@
                     <th>Quantity</th>
                     <th>Unit Price (₹)</th>
                     <th>Taxable Value (₹)</th>
+                    {% if has_cgst_sgst %}
                     <th>CGST (₹)</th>
                     <th>SGST (₹)</th>
+                    {% endif %}
+                    {% if has_igst %}
                     <th>IGST (₹)</th>
+                    {% endif %}
                     <th>Total (₹)</th>
                 </tr>
             </thead>
@@ -335,9 +341,13 @@
                     <td>{{ item['quantity'] }}</td>
                     <td>₹{{ "%.2f"|format(item['unit_price']) }}</td>
                     <td>₹{{ "%.2f"|format(item_subtotal) }}</td>
+                    {% if has_cgst_sgst %}
                     <td>{% if item['cgst'] > 0 %}{{ "%.2f"|format(item['gst_percentage'] / 2) }}% - ₹{{ "%.2f"|format(item['cgst']) }}{% else %}-{% endif %}</td>
                     <td>{% if item['sgst'] > 0 %}{{ "%.2f"|format(item['gst_percentage'] / 2) }}% - ₹{{ "%.2f"|format(item['sgst']) }}{% else %}-{% endif %}</td>
+                    {% endif %}
+                    {% if has_igst %}
                     <td>{% if item['igst'] > 0 %}{{ "%.2f"|format(item['gst_percentage']) }}% - ₹{{ "%.2f"|format(item['igst']) }}{% else %}-{% endif %}</td>
+                    {% endif %}
                     <td>₹{{ "%.2f"|format(item['total']) }}</td>
                 </tr>
                 {% endfor %}
