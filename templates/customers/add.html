@@ -161,48 +161,46 @@
         {% endwith %}
         
         <div class="info-box">
-            <p><strong>Required Fields:</strong> Customer ID and Customer Name only</p>
-            <p><strong>Note:</strong> Customer ID must be unique. Vendor Code is optional but must be unique if provided.</p>
+            <p><strong>Required Fields:</strong> Customer ID (auto-generated), Customer Name, Address and State</p>
+            <p><strong>Note:</strong> Customer ID is auto-generated and unique. Vendor Code is optional but must be unique if provided.</p>
         </div>
         
-        <form method="POST" action="{{ url_for('customers.add') }}">
-            <div class="form-group">
-                <label for="customer_id">Customer ID <span class="required">*</span></label>
-                <input type="text" id="customer_id" name="customer_id" required
-                       placeholder="Enter unique customer ID (e.g., CUST001, C-2024-001)">
-                <div class="help-text">This ID must be unique for each customer</div>
-            </div>
+        <form method="POST" action="{{ url_for('customers.add') }}" autocomplete="off">
+            <!-- Hidden dummy fields to discourage browser autofill -->
+            <input type="text" name="fake_username" id="fake_username" style="display:none" autocomplete="off">
+            <input type="password" name="fake_password" id="fake_password" style="display:none" autocomplete="off">
+            <!-- Customer ID is auto-generated on the server; not shown in the form -->
             
             <div class="form-group">
                 <label for="vendor_code">Vendor Code</label>
-                <input type="text" id="vendor_code" name="vendor_code"
-                       placeholder="Enter unique vendor code (e.g., VEND001)">
+                  <input type="text" id="vendor_code" name="vendor_code" autocomplete="off"
+                      placeholder="Enter unique vendor code (e.g., VEND001)">
                 <div class="help-text">Optional - This code must be unique if provided</div>
             </div>
             
             <div class="form-group">
                 <label for="name">Customer Name <span class="required">*</span></label>
-                <input type="text" id="name" name="name" required placeholder="Enter customer name">
+                <input type="text" id="name" name="name" autocomplete="off" required placeholder="Enter customer name">
             </div>
             
             <div class="form-row">
                 <div class="form-group">
                     <label for="mobile">Mobile Number</label>
-                    <input type="tel" id="mobile" name="mobile"
-                           placeholder="Enter mobile number" pattern="[0-9]{10}">
+                          <input type="tel" id="mobile" name="mobile" autocomplete="off"
+                              placeholder="Enter mobile number" pattern="[0-9]{10}">
                     <div class="help-text">10 digit mobile number (optional)</div>
                 </div>
                 
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" name="email" placeholder="Enter email address">
+                    <input type="email" id="email" name="email" autocomplete="off" placeholder="Enter email address">
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="state">State</label>
-                    <select id="state" name="state">
+                    <label for="state">State <span class="required">*</span></label>
+                    <select id="state" name="state" autocomplete="off" required>
                         <option value="">Select State</option>
                         <option value="Puducherry">Puducherry</option>
                         <option value="Tamil Nadu">Tamil Nadu</option>
@@ -211,15 +209,15 @@
                 
                 <div class="form-group">
                     <label for="gst_number">GST Number</label>
-                    <input type="text" id="gst_number" name="gst_number" 
-                           placeholder="Enter GST number" maxlength="15">
-                    <div class="help-text">15 character GST number (optional)</div>
+                          <input type="text" id="gst_number" name="gst_number" autocomplete="off"
+                              placeholder="Enter GST number">
+                    <div class="help-text">15 character GST number (optional). Typing more than 15 will beep and highlight.</div>
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="address">Address</label>
-                <textarea id="address" name="address" placeholder="Enter customer address"></textarea>
+                <label for="address">Address <span class="required">*</span></label>
+                <textarea id="address" name="address" autocomplete="off" placeholder="Enter customer address" required></textarea>
             </div>
             
             <div class="button-group">
@@ -228,5 +226,154 @@
             </div>
         </form>
     </div>
+    <style>
+        .input-error {
+            border-color: #e74c3c !important;
+            box-shadow: 0 0 6px rgba(231,76,60,0.3);
+            animation: pulse 0.6s ease-in-out 0s 2;
+        }
+
+        @keyframes pulse {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+            100% { transform: translateY(0); }
+        }
+    </style>
+
+    <script>
+        (function() {
+            function playBeep() {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const o = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    o.type = 'sine';
+                    o.frequency.value = 1000;
+                    g.gain.value = 0.05;
+                    o.connect(g);
+                    g.connect(ctx.destination);
+                    o.start();
+                    setTimeout(function(){ o.stop(); ctx.close(); }, 120);
+                } catch (e) {
+                    // fallback: small alert (no audible beep guaranteed)
+                }
+            }
+
+            var mobile = document.getElementById('mobile');
+            var gst = document.getElementById('gst_number');
+            var prev_mobile_digits = mobile ? (mobile.value || '').replace(/\D/g, '').length : 0;
+            var prev_gst_digits = gst ? (gst.value || '').replace(/\D/g, '').length : 0;
+
+            function checkMobile() {
+                if (!mobile) return;
+                var digits = (mobile.value || '').replace(/\D/g, '');
+                var len = digits.length;
+                var excess = Math.max(0, len - 10);
+                var prevExcess = Math.max(0, prev_mobile_digits - 10);
+
+                if (excess > 0) {
+                    // play beep for each newly added excess digit
+                    var times = Math.max(0, excess - prevExcess);
+                    for (let i = 0; i < times; i++) {
+                        setTimeout(playBeep, i * 120);
+                    }
+                    mobile.classList.add('input-error');
+                } else {
+                    mobile.classList.remove('input-error');
+                }
+
+                prev_mobile_digits = len;
+            }
+
+            function checkGst() {
+                if (!gst) return;
+                var digits = (gst.value || '').replace(/\D/g, '');
+                var len = digits.length;
+                var excess = Math.max(0, len - 10);
+                var prevExcess = Math.max(0, prev_gst_digits - 10);
+
+                if (excess > 0) {
+                    var times = Math.max(0, excess - prevExcess);
+                    for (let i = 0; i < times; i++) {
+                        setTimeout(playBeep, i * 120);
+                    }
+                    gst.classList.add('input-error');
+                } else {
+                    gst.classList.remove('input-error');
+                }
+
+                prev_gst_digits = len;
+            }
+
+            if (mobile) {
+                mobile.addEventListener('input', checkMobile);
+                mobile.setAttribute('maxlength', '20');
+            }
+
+            if (gst) {
+                gst.addEventListener('input', checkGst);
+                gst.setAttribute('maxlength', '30');
+                // Convert GST input to uppercase
+                gst.addEventListener('input', function(){
+                    gst.value = gst.value.toUpperCase();
+                });
+            }
+
+            // Basic client-side required-field guard before submit
+            var form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e){
+                    var addr = document.getElementById('address');
+                    var st = document.getElementById('state');
+                    var problems = [];
+                    if (!addr || !addr.value.trim()) problems.push('Address is required');
+                    if (!st || !st.value.trim()) problems.push('State is required');
+                    if (problems.length) {
+                        e.preventDefault();
+                        alert(problems.join('\n'));
+                        if (addr) addr.focus();
+                    }
+                });
+            }
+
+                // Vendor code uniqueness check (debounced) -> popup alert + highlight if exists
+                var vendorInput = document.getElementById('vendor_code');
+                var vendorTimer = null;
+                function checkVendorUnique(code) {
+                    if (!code) return;
+                    var url = '{{ url_for("customers.check_vendor") }}';
+                    fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ vendor_code: code })
+                    }).then(function(res){ return res.json(); })
+                    .then(function(data){
+                        if (data && data.exists) {
+                            vendorInput.classList.add('input-error');
+                            alert('Vendor Code already exists. Please choose a different code.');
+                            vendorInput.focus();
+                        } else {
+                            vendorInput.classList.remove('input-error');
+                        }
+                    }).catch(function(err){
+                        // ignore network errors silently
+                    });
+                }
+
+                if (vendorInput) {
+                    vendorInput.addEventListener('input', function(){
+                        vendorInput.classList.remove('input-error');
+                        clearTimeout(vendorTimer);
+                        var code = vendorInput.value.trim();
+                        // only check when length >= 2 to avoid unnecessary requests
+                        vendorTimer = setTimeout(function(){ if (code.length >= 2) checkVendorUnique(code); }, 400);
+                    });
+                    vendorInput.addEventListener('blur', function(){
+                        var code = vendorInput.value.trim();
+                        if (code.length >= 1) checkVendorUnique(code);
+                    });
+                }
+        })();
+    </script>
 </body>
 </html>
