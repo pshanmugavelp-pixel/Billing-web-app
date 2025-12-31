@@ -252,17 +252,14 @@
             </div>
         </div>
         
-        <!-- Search Bar -->
+        <!-- Live Search Bar -->
         <div style="margin: 20px 0;" class="no-print">
-            <form method="GET" action="{{ url_for('customers.index') }}" style="display: flex; gap: 10px;">
-                <input type="text" name="search" value="{{ search_query or '' }}"
-                       placeholder="Search by Customer ID, Vendor Code, or Name..."
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input id="searchInput" type="text" value="{{ search_query or '' }}"
+                       placeholder="Type to search Customer ID, Vendor Code, or Name..."
                        style="flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
-                <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Search</button>
-                {% if search_query %}
-                <a href="{{ url_for('customers.index') }}" class="btn btn-secondary" style="padding: 10px 20px;">Clear</a>
-                {% endif %}
-            </form>
+                <button id="clearSearch" class="btn btn-secondary" style="padding: 10px 20px; display: none;">Clear</button>
+            </div>
         </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -296,7 +293,7 @@
                                 <th>Email Address</th>
                                 <th>State</th>
                                 <th>GST Number</th>
-                                <th>Registration Date</th>
+                                <th>Address</th>
                                 <th class="no-print">Actions</th>
                             </tr>
                         </thead>
@@ -322,7 +319,7 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ customer['gst_number'] or 'N/A' }}</td>
-                                <td>{{ customer['created_at'] }}</td>
+                                <td>{{ customer['address'] or 'N/A' }}</td>
                                 <td class="no-print">
                                     <a href="{{ url_for('customers.update', customer_id=customer['id']) }}"
                                        class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Edit</a>
@@ -433,6 +430,65 @@
             // Download file
             XLSX.writeFile(wb, filename);
         }
+        // Live search: filter table rows as user types (no search button required)
+        (function(){
+            var input = document.getElementById('searchInput');
+            var clearBtn = document.getElementById('clearSearch');
+            var customerCountEl = document.querySelector('.customer-count');
+            var totalCount = {{ customers|length }};
+
+            function updateCount(visible) {
+                if (!customerCountEl) return;
+                customerCountEl.textContent = 'Showing ' + visible + ' of ' + totalCount + ' customers';
+            }
+
+            function normalize(s){ return (s||'').toString().toLowerCase(); }
+
+            function filterTable(){
+                if (!input) return;
+                var q = normalize(input.value).trim();
+                var rows = document.querySelectorAll('table tbody tr');
+                var shown = 0;
+
+                rows.forEach(function(tr){
+                    var tds = tr.querySelectorAll('td');
+                    // columns: 0 checkbox,1 id,2 customer_id,3 vendor_code,4 name
+                    var cid = normalize(tds[2] ? tds[2].textContent : '');
+                    var vcode = normalize(tds[3] ? tds[3].textContent : '');
+                    var name = normalize(tds[4] ? tds[4].textContent : '');
+
+                    var match = true;
+                    if (q) {
+                        match = cid.indexOf(q) !== -1 || vcode.indexOf(q) !== -1 || name.indexOf(q) !== -1;
+                    }
+
+                    if (match) {
+                        tr.style.display = '';
+                        shown += 1;
+                    } else {
+                        tr.style.display = 'none';
+                    }
+                });
+
+                updateCount(shown);
+                clearBtn.style.display = q ? 'inline-block' : 'none';
+            }
+
+            if (input) {
+                input.addEventListener('input', filterTable);
+                // initial run if prefilled
+                filterTable();
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    input.value = '';
+                    filterTable();
+                    input.focus();
+                });
+            }
+        })();
     </script>
 </body>
 </html>
