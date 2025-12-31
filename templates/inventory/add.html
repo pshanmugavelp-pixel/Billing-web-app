@@ -140,6 +140,31 @@
             margin-top: 5px;
         }
     </style>
+    <script>
+        function calculateExpiryDate() {
+            const manufactureDate = document.getElementById('manufacture_date').value;
+            const expiryMonths = parseInt(document.getElementById('expiry_months').value);
+            
+            if (manufactureDate && expiryMonths > 0) {
+                const mfgDate = new Date(manufactureDate);
+                // Add months to manufacture date
+                mfgDate.setMonth(mfgDate.getMonth() + expiryMonths);
+                
+                // Format as YYYY-MM for month input
+                const year = mfgDate.getFullYear();
+                const month = String(mfgDate.getMonth() + 1).padStart(2, '0');
+                const expiryMonth = `${year}-${month}`;
+                
+                document.getElementById('expiry_month').value = expiryMonth;
+            }
+        }
+        
+        // Add event listeners when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('manufacture_date').addEventListener('change', calculateExpiryDate);
+            document.getElementById('expiry_months').addEventListener('input', calculateExpiryDate);
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -184,16 +209,22 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="manufacture_date">Manufacture Date</label>
-                    <input type="date" id="manufacture_date" name="manufacture_date">
+                    <label for="manufacture_date">Manufacture Date <span class="required">*</span></label>
+                    <input type="date" id="manufacture_date" name="manufacture_date" required>
                 </div>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="expiry_month">Expiry Month <span class="required">*</span></label>
-                    <input type="month" id="expiry_month" name="expiry_month" required>
-                    <div class="help-text">Select month and year of expiry</div>
+                    <label for="expiry_months">Expiry (Months from Manufacture) <span class="required">*</span></label>
+                    <input type="number" id="expiry_months" name="expiry_months" min="1" required placeholder="e.g., 12">
+                    <div class="help-text">Number of months until expiry from manufacture date</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="expiry_month">Calculated Expiry Date</label>
+                    <input type="month" id="expiry_month" name="expiry_month" readonly style="background: #f0f0f0;">
+                    <div class="help-text">Auto-calculated based on manufacture date + months</div>
                 </div>
                 
                 <div class="form-group">

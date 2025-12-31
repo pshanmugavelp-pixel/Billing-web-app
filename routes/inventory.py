@@ -5,6 +5,8 @@ Handles all inventory-related routes
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from database import get_db_connection
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 inventory_bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 
@@ -24,15 +26,26 @@ def add():
         product_name = request.form['product_name']
         hsn_code = request.form.get('hsn_code', '')
         manufacture_date = request.form.get('manufacture_date', '')
-        expiry_month = request.form['expiry_month']
+        expiry_months = request.form.get('expiry_months', 0)
         quantity = request.form.get('quantity', 0)
         buy_price = request.form.get('buy_price', 0.0)
         unit_price = request.form.get('unit_price', 0.0)
         mrp = request.form.get('mrp', 0.0)
         gst_percentage = request.form.get('gst_percentage', 0.0)
         
-        if not product_id or not product_name or not expiry_month:
-            flash('Product ID, Product Name, and Expiry Month are required!', 'error')
+        # Calculate expiry month from manufacture date + expiry months
+        expiry_month = ''
+        if manufacture_date and expiry_months:
+            try:
+                mfg_date = datetime.strptime(manufacture_date, '%Y-%m-%d')
+                expiry_date = mfg_date + relativedelta(months=int(expiry_months))
+                expiry_month = expiry_date.strftime('%Y-%m')
+            except:
+                flash('Invalid manufacture date or expiry months!', 'error')
+                return redirect(url_for('inventory.add'))
+        
+        if not product_id or not product_name or not manufacture_date or not expiry_months:
+            flash('Product ID, Product Name, Manufacture Date, and Expiry Months are required!', 'error')
             return redirect(url_for('inventory.add'))
         
         conn = get_db_connection()
@@ -94,15 +107,27 @@ def update(id):
         product_name = request.form['product_name']
         hsn_code = request.form.get('hsn_code', '')
         manufacture_date = request.form.get('manufacture_date', '')
-        expiry_month = request.form['expiry_month']
+        expiry_months = request.form.get('expiry_months', 0)
         quantity = request.form.get('quantity', 0)
         buy_price = request.form.get('buy_price', 0.0)
         unit_price = request.form.get('unit_price', 0.0)
         mrp = request.form.get('mrp', 0.0)
         gst_percentage = request.form.get('gst_percentage', 0.0)
         
-        if not product_id or not product_name or not expiry_month:
-            flash('Product ID, Product Name, and Expiry Month are required!', 'error')
+        # Calculate expiry month from manufacture date + expiry months
+        expiry_month = ''
+        if manufacture_date and expiry_months:
+            try:
+                mfg_date = datetime.strptime(manufacture_date, '%Y-%m-%d')
+                expiry_date = mfg_date + relativedelta(months=int(expiry_months))
+                expiry_month = expiry_date.strftime('%Y-%m')
+            except:
+                flash('Invalid manufacture date or expiry months!', 'error')
+                conn.close()
+                return redirect(url_for('inventory.update', id=id))
+        
+        if not product_id or not product_name or not manufacture_date or not expiry_months:
+            flash('Product ID, Product Name, Manufacture Date, and Expiry Months are required!', 'error')
             conn.close()
             return redirect(url_for('inventory.update', id=id))
         
