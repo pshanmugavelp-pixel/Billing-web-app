@@ -533,7 +533,7 @@
                     }
                     
                     // Calculate amounts
-                    const unitPrice = product.mrp;
+                    const unitPrice = product.unit_price;
                     const subtotal = quantity * unitPrice;
                     const gstAmount = (subtotal * product.gst_percentage) / 100;
                     const total = subtotal + gstAmount;
