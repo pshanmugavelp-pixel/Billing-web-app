@@ -94,9 +94,8 @@ def create():
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                             (bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
                              payment_status, payment_method, notes))
-        bill_id = cursor.lastrowid
         
-        # Insert bill items and update inventory
+        # Insert bill items and update inventory (use bill_id text, not lastrowid)
         for item in items:
             conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
                            unit_price, subtotal, gst_percentage, gst_amount, total)
@@ -170,16 +169,25 @@ def delete(id):
     """Delete a bill by ID"""
     conn = get_db_connection()
     
+    # Get bill_id text from billing table
+    bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (id,)).fetchone()
+    if not bill:
+        flash('Bill not found!', 'error')
+        conn.close()
+        return redirect(url_for('billing.index'))
+    
+    bill_id_text = bill['bill_id']
+    
     # Get bill items to restore inventory
-    items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?', (id,)).fetchall()
+    items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?', (bill_id_text,)).fetchall()
     
     for item in items:
         # Restore inventory quantity
-        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?', 
+        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
                     (item['quantity'], item['product_id']))
     
-    # Delete bill items (will cascade delete from billing table)
-    conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (id,))
+    # Delete bill items and bill
+    conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id_text,))
     conn.execute('DELETE FROM billing WHERE id = ?', (id,))
     conn.commit()
     conn.close()
@@ -190,30 +198,36 @@ def delete(id):
 @billing_bp.route('/delete-multiple', methods=['POST'])
 def delete_multiple():
     """Delete multiple bills"""
-    bill_ids = request.form.getlist('bill_ids[]')
+    bill_internal_ids = request.form.getlist('bill_ids[]')
     
-    if not bill_ids:
+    if not bill_internal_ids:
         flash('No bills selected!', 'error')
         return redirect(url_for('billing.index'))
     
     conn = get_db_connection()
     
+    # Get bill_id texts for the selected bills
+    placeholders = ','.join('?' * len(bill_internal_ids))
+    bills = conn.execute(f'SELECT bill_id FROM billing WHERE id IN ({placeholders})', bill_internal_ids).fetchall()
+    bill_id_texts = [bill['bill_id'] for bill in bills]
+    
     # Restore inventory for all bills being deleted
-    placeholders = ','.join('?' * len(bill_ids))
-    items = conn.execute(f'SELECT product_id, quantity FROM billing_items WHERE bill_id IN ({placeholders})', 
-                        bill_ids).fetchall()
+    placeholders_text = ','.join('?' * len(bill_id_texts))
+    items = conn.execute(f'SELECT product_id, quantity FROM billing_items WHERE bill_id IN ({placeholders_text})',
+                        bill_id_texts).fetchall()
     
     for item in items:
-        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?', 
+        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
                     (item['quantity'], item['product_id']))
     
     # Delete bill items and bills
-    conn.execute(f'DELETE FROM billing_items WHERE bill_id IN ({placeholders})', bill_ids)
-    conn.execute(f'DELETE FROM billing WHERE id IN ({placeholders})', bill_ids)
+    conn.execute(f'DELETE FROM billing_items WHERE bill_id IN ({placeholders_text})', bill_id_texts)
+    placeholders_int = ','.join('?' * len(bill_internal_ids))
+    conn.execute(f'DELETE FROM billing WHERE id IN ({placeholders_int})', bill_internal_ids)
     conn.commit()
     conn.close()
     
-    flash(f'{len(bill_ids)} bill(s) deleted successfully! Inventory restored.', 'success')
+    flash(f'{len(bill_internal_ids)} bill(s) deleted successfully! Inventory restored.', 'success')
     return redirect(url_for('billing.index'))
 
 @billing_bp.route('/view/<int:id>')
@@ -227,13 +241,18 @@ def view(id):
         WHERE b.id = ?
     ''', (id,)).fetchone()
     
+    if not bill:
+        flash('Bill not found!', 'error')
+        conn.close()
+        return redirect(url_for('billing.index'))
+    
     items = conn.execute('''
         SELECT bi.*, i.product_id as inventory_product_id
         FROM billing_items bi
         LEFT JOIN inventory i ON bi.product_id = i.id
         WHERE bi.bill_id = ?
         ORDER BY bi.id
-    ''', (id,)).fetchall()
+    ''', (bill['bill_id'],)).fetchall()
     
     conn.close()
     return render_template('billing/view.html', bill=bill, items=items)
@@ -276,9 +295,13 @@ def update(bill_id):
             conn.close()
             return redirect(url_for('billing.update', bill_id=bill_id))
         
+        # Get current bill's bill_id text
+        current_bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_id,)).fetchone()
+        current_bill_id_text = current_bill['bill_id']
+        
         # Get old bill items to restore inventory
         old_items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
-                                (bill_id,)).fetchall()
+                                (current_bill_id_text,)).fetchall()
         
         # Restore old inventory quantities
         for old_item in old_items:
@@ -313,14 +336,14 @@ def update(bill_id):
                      payment_status, payment_method, notes, bill_id))
         
         # Delete old bill items
-        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id,))
+        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
         
-        # Insert new bill items and update inventory
+        # Insert new bill items with new bill_id text and update inventory
         for item in items:
             conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
                            unit_price, subtotal, gst_percentage, gst_amount, total)
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (bill_id, item['product_id'], item['product_name'], item['quantity'],
+                        (new_bill_id, item['product_id'], item['product_name'], item['quantity'],
                          item['unit_price'], item['subtotal'], item['gst_percentage'],
                          item['gst_amount'], item['total']))
             
