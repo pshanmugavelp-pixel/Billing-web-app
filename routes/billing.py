@@ -750,4 +750,37 @@ def update(bill_id):
     return render_template('billing/update.html', bill=dict(bill), bill_items=bill_items,
                          customers=customers, inventory=inventory, seller_state=seller_state)
 
+@billing_bp.route('/active-bills-export')
+def active_bills_export():
+    """Display all active bills with detailed information for Excel export"""
+    conn = get_db_connection()
+    
+    # Get all active bills (not cancelled) with customer details
+    bills = conn.execute('''
+        SELECT
+            b.bill_id,
+            c.name as customer_name,
+            c.gst_number as customer_gst,
+            b.bill_date,
+            b.subtotal,
+            b.gst_amount,
+            b.total_amount,
+            b.payment_status,
+            b.notes,
+            b.created_at,
+            c.customer_id,
+            c.vendor_code,
+            c.email,
+            c.mobile,
+            c.address,
+            c.state
+        FROM billing b
+        JOIN customers c ON b.customer_id = c.id
+        WHERE b.payment_status != 'Cancelled'
+        ORDER BY b.created_at DESC
+    ''').fetchall()
+    
+    conn.close()
+    return render_template('billing/active_bills_export.html', bills=bills)
+
 # Made with Bob

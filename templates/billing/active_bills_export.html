@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Bills Export</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        h1 {
+            color: #333;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-info {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #2980b9;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1400px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+        }
+        
+        th {
+            background: #2ecc71;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .bill-count {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-partial {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            margin: 5px 0;
+            color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📊 Active Bills Export</h1>
+                <p class="bill-count">Total Active Bills: {{ bills|length }}</p>
+            </div>
+            <div class="button-group">
+                <button onclick="downloadExcel()" class="btn btn-success no-print">📥 Download Excel</button>
+                <button onclick="window.print()" class="btn btn-info no-print">🖨️ Print</button>
+                <a href="{{ url_for('billing.index') }}" class="btn btn-secondary no-print">← Back to Bills</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary no-print">← Dashboard</a>
+            </div>
+        </div>
+        
+        <div class="info-box no-print">
+            <p><strong>ℹ️ About this page:</strong></p>
+            <p>This page displays all active bills (excluding cancelled bills) with complete customer and billing information.</p>
+            <p>Click "Download Excel" to export all data to a spreadsheet file.</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if bills %}
+            <div class="table-wrapper">
+                <table id="billsTable">
+                    <thead>
+                        <tr>
+                            <th>Bill ID</th>
+                            <th>Customer Name</th>
+                            <th>Customer GST Number</th>
+                            <th>Bill Date</th>
+                            <th>Subtotal (₹)</th>
+                            <th>GST Amount (₹)</th>
+                            <th>Total Amount (₹)</th>
+                            <th>Payment Status</th>
+                            <th>Notes</th>
+                            <th>Created Date</th>
+                            <th>Customer ID</th>
+                            <th>Vendor Code</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                            <th>Address</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in bills %}
+                        <tr>
+                            <td>{{ bill['bill_id'] }}</td>
+                            <td>{{ bill['customer_name'] }}</td>
+                            <td>{{ bill['customer_gst'] or 'N/A' }}</td>
+                            <td>{{ bill['bill_date'] }}</td>
+                            <td>₹{{ "%.2f"|format(bill['subtotal']) }}</td>
+                            <td>₹{{ "%.2f"|format(bill['gst_amount']) }}</td>
+                            <td>₹{{ "%.2f"|format(bill['total_amount']) }}</td>
+                            <td>
+                                <span class="status-badge status-{{ bill['payment_status']|lower }}">
+                                    {{ bill['payment_status'] }}
+                                </span>
+                            </td>
+                            <td>{{ bill['notes'] or '' }}</td>
+                            <td>{{ bill['created_at'] }}</td>
+                            <td>{{ bill['customer_id'] }}</td>
+                            <td>{{ bill['vendor_code'] or 'N/A' }}</td>
+                            <td>{{ bill['email'] or 'N/A' }}</td>
+                            <td>{{ bill['mobile'] or 'N/A' }}</td>
+                            <td>{{ bill['address'] or 'N/A' }}</td>
+                            <td>{{ bill['state'] or 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="no-data">
+                <p>No active bills found.</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        function downloadExcel() {
+            // Get table data
+            const table = document.getElementById('billsTable');
+            const rows = [];
+            
+            // Get headers
+            const headers = [];
+            table.querySelectorAll('thead th').forEach(th => {
+                headers.push(th.textContent.trim());
+            });
+            rows.push(headers);
+            
+            // Get data rows
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const row = [];
+                tr.querySelectorAll('td').forEach(td => {
+                    // Remove currency symbols and clean text
+                    let text = td.textContent.trim();
+                    // Remove ₹ symbol for numeric columns
+                    text = text.replace('₹', '');
+                    row.push(text);
+                });
+                rows.push(row);
+            });
+            
+            // Create workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            
+            // Set column widths
+            ws['!cols'] = [
+                {wch: 12},  // Bill ID
+                {wch: 25},  // Customer Name
+                {wch: 20},  // Customer GST Number
+                {wch: 12},  // Bill Date
+                {wch: 12},  // Subtotal
+                {wch: 12},  // GST Amount
+                {wch: 15},  // Total Amount
+                {wch: 15},  // Payment Status
+                {wch: 30},  // Notes
+                {wch: 20},  // Created Date
+                {wch: 15},  // Customer ID
+                {wch: 15},  // Vendor Code
+                {wch: 25},  // Email
+                {wch: 15},  // Mobile
+                {wch: 35},  // Address
+                {wch: 15}   // State
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Active Bills');
+            
+            // Generate filename with current date
+            const date = new Date().toISOString().split('T')[0];
+            const filename = `active_bills_export_${date}.xlsx`;
+            
+            // Download file
+            XLSX.writeFile(wb, filename);
+        }
+    </script>
+</body>
+</html>
