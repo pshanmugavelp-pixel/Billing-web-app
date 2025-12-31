@@ -422,9 +422,9 @@ def update(bill_id):
         # Get current bill's bill_id text
         current_bill_id_text = current_bill['bill_id']
         
-        # Get old bill items
+        # Get old bill items (use numeric bill_id, not text bill_id)
         old_items = conn.execute('SELECT product_id, quantity, product_name FROM billing_items WHERE bill_id = ?',
-                                (current_bill_id_text,)).fetchall()
+                                (bill_id,)).fetchall()
         
         # If not confirmed, show preview of inventory changes
         if confirm_update != 'yes':
