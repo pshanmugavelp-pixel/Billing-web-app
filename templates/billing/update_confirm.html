@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Bill Update - Inventory Changes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .warning-icon {
+            font-size: 40px;
+            color: #ff9800;
+        }
+
+        .warning-text h2 {
+            color: #856404;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .warning-text p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .changes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .changes-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .changes-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .changes-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        .changes-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .changes-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .increase {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .decrease {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .no-change {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .summary-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .summary-box p {
+            color: #1565c0;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .summary-box strong {
+            color: #0d47a1;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .arrow {
+            display: inline-block;
+            margin: 0 10px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .changes-table {
+                font-size: 12px;
+            }
+
+            .changes-table th,
+            .changes-table td {
+                padding: 8px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Confirm Bill Update</h1>
+            <p>Review inventory changes before proceeding</p>
+        </div>
+
+        <div class="content">
+            <div class="warning-box">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-text">
+                    <h2>Inventory Will Be Updated</h2>
+                    <p>
+                        Updating this bill will modify your inventory. Old bill items will be restored to stock,
+                        and new bill items will be deducted. Please review the changes below carefully before confirming.
+                    </p>
+                </div>
+            </div>
+
+            {% if inventory_changes %}
+            <div class="section">
+                <h3>📊 Inventory Changes Summary</h3>
+                
+                <div class="summary-box">
+                    <p><strong>Total Products Affected:</strong> {{ inventory_changes|length }}</p>
+                    <p><strong>Bill ID:</strong> {{ form_data.bill_id }}</p>
+                </div>
+
+                <table class="changes-table">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Current Stock</th>
+                            <th>Old Bill Qty</th>
+                            <th>New Bill Qty</th>
+                            <th>Net Change</th>
+                            <th>New Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for change in inventory_changes %}
+                        <tr>
+                            <td><strong>{{ change.product_name }}</strong></td>
+                            <td>{{ change.current_qty }}</td>
+                            <td>{{ change.old_bill_qty }}</td>
+                            <td>{{ change.new_bill_qty }}</td>
+                            <td>
+                                {% if change.net_change > 0 %}
+                                    <span class="increase">+{{ change.net_change }}</span>
+                                {% elif change.net_change < 0 %}
+                                    <span class="decrease">{{ change.net_change }}</span>
+                                {% else %}
+                                    <span class="no-change">No change</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ change.current_qty }}</strong>
+                                <span class="arrow">→</span>
+                                <strong>{{ change.new_inventory }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="section">
+                <div class="summary-box">
+                    <p><strong>No inventory changes detected.</strong></p>
+                    <p>The bill items remain the same as before.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('billing.update', bill_id=bill.id) }}">
+                <!-- Hidden fields to preserve form data -->
+                <input type="hidden" name="bill_id" value="{{ form_data.bill_id }}">
+                <input type="hidden" name="customer_id" value="{{ form_data.customer_id }}">
+                <input type="hidden" name="bill_date" value="{{ form_data.bill_date }}">
+                <input type="hidden" name="payment_status" value="{{ form_data.payment_status }}">
+                <input type="hidden" name="notes" value="{{ form_data.notes }}">
+                <input type="hidden" name="items_data" value="{{ form_data.items_data }}">
+                <input type="hidden" name="confirm_update" value="yes">
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-confirm">
+                        ✓ Confirm & Update Bill
+                    </button>
+                    <a href="{{ url_for('billing.update', bill_id=bill.id) }}" class="btn btn-cancel">
+                        ✗ Cancel & Go Back
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

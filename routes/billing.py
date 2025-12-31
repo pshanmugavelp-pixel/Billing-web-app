@@ -376,6 +376,9 @@ def update(bill_id):
     conn = get_db_connection()
     
     if request.method == 'POST':
+        # Check if user confirmed the update
+        confirm_update = request.form.get('confirm_update')
+        
         new_bill_id = request.form.get('bill_id', '').strip()
         customer_id = request.form['customer_id']
         bill_date = request.form['bill_date']
@@ -408,13 +411,105 @@ def update(bill_id):
             return redirect(url_for('billing.update', bill_id=bill_id))
         
         # Get current bill's bill_id text
-        current_bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_id,)).fetchone()
         current_bill_id_text = current_bill['bill_id']
         
-        # Get old bill items to restore inventory
-        old_items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
+        # Get old bill items
+        old_items = conn.execute('SELECT product_id, quantity, product_name FROM billing_items WHERE bill_id = ?',
                                 (current_bill_id_text,)).fetchall()
         
+        # If not confirmed, show preview of inventory changes
+        if confirm_update != 'yes':
+            # Calculate inventory changes
+            inventory_changes = []
+            
+            # Track old items (will be restored)
+            old_products = {}
+            for old_item in old_items:
+                pid = old_item['product_id']
+                if pid in old_products:
+                    old_products[pid]['quantity'] += old_item['quantity']
+                else:
+                    old_products[pid] = {
+                        'product_name': old_item['product_name'],
+                        'quantity': old_item['quantity']
+                    }
+            
+            # Track new items (will be deducted)
+            new_products = {}
+            for item in items:
+                pid = item['product_id']
+                if pid in new_products:
+                    new_products[pid]['quantity'] += item['quantity']
+                else:
+                    new_products[pid] = {
+                        'product_name': item['product_name'],
+                        'quantity': item['quantity']
+                    }
+            
+            # Calculate net changes
+            all_product_ids = set(old_products.keys()) | set(new_products.keys())
+            for pid in all_product_ids:
+                old_qty = old_products.get(pid, {}).get('quantity', 0)
+                new_qty = new_products.get(pid, {}).get('quantity', 0)
+                product_name = old_products.get(pid, {}).get('product_name') or new_products.get(pid, {}).get('product_name')
+                
+                # Get current inventory
+                current_inv = conn.execute('SELECT quantity FROM inventory WHERE id = ?', (pid,)).fetchone()
+                current_qty = current_inv['quantity'] if current_inv else 0
+                
+                net_change = old_qty - new_qty  # Positive means inventory increases, negative means decreases
+                new_inventory = current_qty + net_change
+                
+                if net_change != 0:
+                    inventory_changes.append({
+                        'product_id': pid,
+                        'product_name': product_name,
+                        'current_qty': current_qty,
+                        'old_bill_qty': old_qty,
+                        'new_bill_qty': new_qty,
+                        'net_change': net_change,
+                        'new_inventory': new_inventory
+                    })
+            
+            # Check if any new inventory would be negative
+            insufficient_stock = []
+            for change in inventory_changes:
+                if change['new_inventory'] < 0:
+                    insufficient_stock.append(change)
+            
+            if insufficient_stock:
+                flash('Cannot update bill: Insufficient inventory for the following products:', 'error')
+                for item in insufficient_stock:
+                    flash(f"• {item['product_name']}: Current stock {item['current_qty']}, would become {item['new_inventory']} after update", 'error')
+                conn.close()
+                return redirect(url_for('billing.update', bill_id=bill_id))
+            
+            # Get all data for the confirmation form
+            bill = conn.execute('SELECT * FROM billing WHERE id = ?', (bill_id,)).fetchone()
+            customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
+            customers = [dict(row) for row in customers_rows]
+            inventory_rows = conn.execute('SELECT * FROM inventory ORDER BY product_name').fetchall()
+            inventory = [dict(row) for row in inventory_rows]
+            
+            conn.close()
+            
+            # Show confirmation page with inventory changes
+            return render_template('billing/update_confirm.html',
+                                 bill=dict(bill),
+                                 items=items,
+                                 customers=customers,
+                                 inventory=inventory,
+                                 inventory_changes=inventory_changes,
+                                 form_data={
+                                     'bill_id': new_bill_id,
+                                     'customer_id': customer_id,
+                                     'bill_date': bill_date,
+                                     'payment_status': payment_status,
+                                     'notes': notes,
+                                     'items_data': items_json
+                                 })
+        
+        # User confirmed - proceed with update
         # Restore old inventory quantities
         for old_item in old_items:
             conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
@@ -468,22 +563,43 @@ def update(bill_id):
                     (new_bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
                      payment_status, notes, bill_id))
         
-        # Delete old bill items
-        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id,))
+        # Get existing billing_items to update or delete
+        existing_items = conn.execute('SELECT id FROM billing_items WHERE bill_id = ? ORDER BY id',
+                                     (bill_id,)).fetchall()
+        existing_item_ids = [item['id'] for item in existing_items]
         
-        # Insert new bill items with numeric bill_id and update inventory
-        for item in items:
-            conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
-                           unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (bill_id, item['product_id'], item['product_name'], item['quantity'],
-                         item['unit_price'], item['gst_percentage'],
-                         item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
-                         item.get('igst', 0), item['total']))
+        # Update or insert bill items
+        for i, item in enumerate(items):
+            if i < len(existing_item_ids):
+                # Update existing item
+                item_id = existing_item_ids[i]
+                conn.execute('''UPDATE billing_items
+                               SET product_id = ?, product_name = ?, quantity = ?,
+                                   unit_price = ?, gst_percentage = ?, gst_amount = ?,
+                                   cgst = ?, sgst = ?, igst = ?, total = ?
+                               WHERE id = ?''',
+                            (item['product_id'], item['product_name'], item['quantity'],
+                             item['unit_price'], item['gst_percentage'],
+                             item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                             item.get('igst', 0), item['total'], item_id))
+            else:
+                # Insert new item
+                conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
+                               unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_id, item['product_id'], item['product_name'], item['quantity'],
+                             item['unit_price'], item['gst_percentage'],
+                             item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                             item.get('igst', 0), item['total']))
             
             # Reduce inventory
             conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
                         (item['quantity'], item['product_id']))
+        
+        # Delete extra items if new list is shorter than old list
+        if len(items) < len(existing_item_ids):
+            for item_id in existing_item_ids[len(items):]:
+                conn.execute('DELETE FROM billing_items WHERE id = ?', (item_id,))
         
         conn.commit()
         conn.close()

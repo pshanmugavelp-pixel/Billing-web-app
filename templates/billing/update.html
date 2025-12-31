@@ -658,8 +658,9 @@
                 return;
             }
             
-            // Set items data as JSON
+            // Set items data as JSON before submitting
             document.getElementById('items_data').value = JSON.stringify(billItems);
+            // Form will submit and show confirmation page on server side
         });
         
         // Close search results when clicking outside
