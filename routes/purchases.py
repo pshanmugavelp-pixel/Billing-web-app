@@ -26,7 +26,7 @@ def add():
     if request.method == 'POST':
         product_name = request.form['product_name'].strip()
         hsn_code = request.form.get('hsn_code', '').strip()
-        manufacture_date = request.form['manufacture_date']  # Required now
+        manufacture_month = request.form['manufacture_month']  # Format: YYYY-MM
         expiry_month = request.form['expiry_month'].strip()
         quantity = int(request.form['quantity'])
         buy_price = float(request.form['buy_price'])
@@ -35,9 +35,13 @@ def add():
         gst_percentage = float(request.form['gst_percentage'])
         purchase_date = request.form['purchase_date']
         
-        if not product_name or not manufacture_date or not expiry_month or quantity <= 0:
+        if not product_name or not manufacture_month or not expiry_month or quantity <= 0:
             flash('Please fill in all required fields with valid values!', 'error')
             return redirect(url_for('purchases.add'))
+        
+        # Convert manufacture month to full date (1st of the month)
+        from datetime import datetime
+        manufacture_date = f"{manufacture_month}-01"  # YYYY-MM-01
         
         conn = get_db_connection()
         
@@ -53,6 +57,7 @@ def add():
             return render_template('purchases/add_confirm.html',
                                  product_name=product_name,
                                  hsn_code=hsn_code,
+                                 manufacture_month=manufacture_month,
                                  manufacture_date=manufacture_date,
                                  expiry_month=expiry_month,
                                  quantity=quantity,

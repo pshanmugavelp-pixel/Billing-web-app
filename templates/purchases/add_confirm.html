@@ -247,8 +247,12 @@
                         <span class="info-value">{{ product_name }}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Manufacture Date</span>
-                        <span class="info-value">{{ manufacture_date }}</span>
+                        <span class="info-label">Manufacture Month</span>
+                        <span class="info-value">{{ manufacture_month }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Inventory Date (Auto)</span>
+                        <span class="info-value">{{ manufacture_date }} (1st of month)</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Expiry Month</span>
@@ -313,6 +317,7 @@
                 <input type="hidden" name="existing_product_id" value="{{ existing_product.product_id }}">
                 <input type="hidden" name="product_name" value="{{ product_name }}">
                 <input type="hidden" name="hsn_code" value="{{ hsn_code }}">
+                <input type="hidden" name="manufacture_month" value="{{ manufacture_month }}">
                 <input type="hidden" name="manufacture_date" value="{{ manufacture_date }}">
                 <input type="hidden" name="expiry_month" value="{{ expiry_month }}">
                 <input type="hidden" name="quantity" value="{{ quantity }}">
