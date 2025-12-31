@@ -337,7 +337,7 @@ def update(bill_id):
                     return redirect(url_for('billing.update', bill_id=bill_id))
         
         # Calculate totals
-        subtotal = sum(float(item['subtotal']) for item in items)
+        subtotal = sum(float(item['quantity']) * float(item['unit_price']) for item in items)
         gst_amount = sum(float(item['gst_amount']) for item in items)
         total_amount = sum(float(item['total']) for item in items)
         
