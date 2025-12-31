@@ -451,14 +451,18 @@
             
             // Load existing bill items
             existingItems.forEach(item => {
+                const subtotal = item.quantity * item.unit_price;
                 billItems.push({
                     product_id: item.product_id,
                     product_name: item.product_name,
                     quantity: item.quantity,
                     unit_price: item.unit_price,
-                    subtotal: item.subtotal,
+                    subtotal: subtotal,
                     gst_percentage: item.gst_percentage,
                     gst_amount: item.gst_amount,
+                    cgst: item.cgst || 0,
+                    sgst: item.sgst || 0,
+                    igst: item.igst || 0,
                     total: item.total
                 });
             });
