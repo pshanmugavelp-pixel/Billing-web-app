@@ -271,6 +271,7 @@
                 {% else %}
                 <a href="{{ url_for('billing.index', show_cancelled='true') }}" class="btn btn-danger no-print">🗑️ View Cancelled Bills</a>
                 {% endif %}
+                <a href="{{ url_for('billing.active_bills_export') }}" class="btn btn-success no-print" style="background: #16a085;">📊 Export Active Bills</a>
                 <button onclick="downloadExcel()" class="btn btn-success no-print">📥 Download Excel</button>
                 <button onclick="window.print()" class="btn btn-info no-print">🖨️ Print</button>
                 <a href="{{ url_for('billing.create') }}" class="btn btn-primary no-print">+ Create Bill</a>
