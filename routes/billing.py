@@ -28,6 +28,10 @@ def create():
     """Create a new bill with multiple items"""
     conn = get_db_connection()
     
+    # Get seller information for state comparison
+    seller = conn.execute('SELECT state FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+    seller_state = seller['state'] if seller and seller['state'] else ''
+    
     # Get customers and inventory for form
     customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
     customers = [dict(row) for row in customers_rows]
@@ -188,7 +192,8 @@ def create():
     
     # GET request - show empty form
     conn.close()
-    return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=None)
+    return render_template('billing/create.html', customers=customers, inventory=inventory,
+                         form_data=None, seller_state=seller_state)
 
 @billing_bp.route('/api/customer/<int:customer_id>')
 def get_customer(customer_id):
@@ -374,6 +379,10 @@ def print_bill(id):
 def update(bill_id):
     """Update an existing bill with multiple items"""
     conn = get_db_connection()
+    
+    # Get seller information for state comparison
+    seller = conn.execute('SELECT state FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+    seller_state = seller['state'] if seller and seller['state'] else ''
     
     if request.method == 'POST':
         # Check if user confirmed the update
@@ -630,6 +639,6 @@ def update(bill_id):
     
     conn.close()
     return render_template('billing/update.html', bill=dict(bill), bill_items=bill_items,
-                         customers=customers, inventory=inventory)
+                         customers=customers, inventory=inventory, seller_state=seller_state)
 
 # Made with Bob

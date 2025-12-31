@@ -142,6 +142,7 @@ def init_db():
             address TEXT,
             email TEXT,
             mobile TEXT,
+            state TEXT,
             gst_number TEXT,
             account_name TEXT,
             account_number TEXT,
@@ -152,6 +153,14 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Add state column to existing seller_info table if it doesn't exist
+    try:
+        conn.execute('SELECT state FROM seller_info LIMIT 1')
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it with default value
+        conn.execute('ALTER TABLE seller_info ADD COLUMN state TEXT')
+        conn.commit()
     
     # Insert default seller info if table is empty
     existing_seller = conn.execute('SELECT COUNT(*) as count FROM seller_info').fetchone()

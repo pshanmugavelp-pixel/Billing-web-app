@@ -406,7 +406,9 @@
         const customers = {{ customers|tojson }};
         const inventory = {{ inventory|tojson }};
         const existingItems = {{ bill_items|tojson }};
+        const sellerState = '{{ seller_state }}';
         let billItems = [];
+        let customerState = '';
         
         // Load existing customer data
         window.addEventListener('DOMContentLoaded', function() {
@@ -475,8 +477,14 @@
                     document.getElementById('customer_name').value = data.name || '';
                     document.getElementById('vendor_code').value = data.vendor_code || 'N/A';
                     document.getElementById('state').value = data.state || 'N/A';
+                    customerState = data.state || '';
                     customerSearch.value = `${data.customer_id} - ${data.name}`;
                     customerSearchResults.classList.remove('show');
+                    
+                    // Recalculate all items with new customer state
+                    billItems.forEach((item, index) => recalculateItem(index));
+                    renderItems();
+                    updateTotals();
                 });
         }
         
@@ -561,6 +569,27 @@
             const item = billItems[index];
             item.subtotal = item.quantity * item.unit_price;
             item.gst_amount = (item.subtotal * item.gst_percentage) / 100;
+            
+            // Calculate CGST/SGST or IGST based on customer state
+            let cgst = 0, sgst = 0, igst = 0;
+            
+            // Normalize states for comparison (trim and lowercase)
+            const normalizedCustomerState = customerState.trim().toLowerCase();
+            const normalizedSellerState = sellerState.trim().toLowerCase();
+            
+            if (normalizedCustomerState && normalizedSellerState &&
+                normalizedCustomerState === normalizedSellerState) {
+                // Same state (Intra-state): Split GST into CGST and SGST
+                cgst = item.gst_amount / 2;
+                sgst = item.gst_amount / 2;
+            } else {
+                // Different state (Inter-state): Use IGST
+                igst = item.gst_amount;
+            }
+            
+            item.cgst = cgst;
+            item.sgst = sgst;
+            item.igst = igst;
             item.total = item.subtotal + item.gst_amount;
         }
         

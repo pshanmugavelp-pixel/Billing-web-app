@@ -460,6 +460,7 @@
         const customers = {{ customers|tojson }};
         const inventory = {{ inventory|tojson }};
         const formData = {{ form_data|tojson }};
+        const sellerState = '{{ seller_state }}';
         let billItems = [];
         
         // Restore form data if available (after error)
@@ -602,12 +603,18 @@
                     
                     // Calculate CGST/SGST or IGST based on customer state
                     let cgst = 0, sgst = 0, igst = 0;
-                    if (customerState.toLowerCase() === 'puducherry') {
-                        // Intra-state: Split GST into CGST and SGST
+                    
+                    // Normalize customer state for comparison (trim and lowercase)
+                    const normalizedCustomerState = customerState.trim().toLowerCase();
+                    const normalizedSellerState = sellerState.trim().toLowerCase();
+                    
+                    if (normalizedCustomerState && normalizedSellerState &&
+                        normalizedCustomerState === normalizedSellerState) {
+                        // Same state (Intra-state): Split GST into CGST and SGST
                         cgst = gstAmount / 2;
                         sgst = gstAmount / 2;
                     } else {
-                        // Inter-state: Use IGST
+                        // Different state (Inter-state): Use IGST
                         igst = gstAmount;
                     }
                     
