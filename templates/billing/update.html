@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Bill #{{ bill['id'] }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        h2 {
+            color: #333;
+            margin: 30px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .required {
+            color: #e74c3c;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        input:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+            margin-left: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #3498db;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .search-results.show {
+            display: block;
+        }
+        
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .search-result-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .items-section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid #3498db;
+        }
+        
+        .item-row {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .item-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            font-size: 14px;
+        }
+        
+        .item-detail {
+            padding: 8px;
+            background: white;
+            border-radius: 3px;
+        }
+        
+        .item-detail strong {
+            display: block;
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
+        .totals-box {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .total-row:last-child {
+            border-bottom: none;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        #itemsList {
+            min-height: 100px;
+        }
+        
+        .empty-items {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Update Bill #{{ bill['id'] }}</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('billing.update', bill_id=bill['id']) }}" id="billForm">
+            <!-- Customer Selection Section -->
+            <div class="section">
+                <h2>Customer Selection</h2>
+                
+                <div class="search-box">
+                    <div class="form-group">
+                        <label for="customerSearch">Search Customer <span class="required">*</span></label>
+                        <input type="text" id="customerSearch" placeholder="Search by Customer ID or Name..." autocomplete="off">
+                        <div class="help-text">Start typing to search for customers</div>
+                    </div>
+                    <div id="customerSearchResults" class="search-results"></div>
+                </div>
+                
+                <input type="hidden" name="customer_id" id="customer_id" value="{{ bill['customer_id'] }}" required>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customer_id_display">Customer ID</label>
+                        <input type="text" id="customer_id_display" disabled>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="customer_name">Customer Name</label>
+                        <input type="text" id="customer_name" disabled>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vendor_code">Vendor Code</label>
+                        <input type="text" id="vendor_code" disabled>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="state">State</label>
+                        <input type="text" id="state" disabled>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Items Section -->
+            <div class="section">
+                <h2>Add Items</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="product_select">Select Product <span class="required">*</span></label>
+                        <select id="product_select">
+                            <option value="">-- Select Product --</option>
+                            {% for product in inventory %}
+                            <option value="{{ product['id'] }}">{{ product['product_id'] }} - {{ product['product_name'] }} (Stock: {{ product['quantity'] }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="item_quantity">Quantity <span class="required">*</span></label>
+                        <input type="number" id="item_quantity" min="1" value="1">
+                    </div>
+                </div>
+                
+                <button type="button" onclick="addItem()" class="btn btn-success">+ Add Item to Bill</button>
+            </div>
+            
+            <!-- Items List -->
+            <div class="items-section">
+                <h2>Bill Items</h2>
+                <div id="itemsList">
+                    <div class="empty-items">No items added yet. Add items using the form above.</div>
+                </div>
+                
+                <div class="totals-box">
+                    <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span id="display_subtotal">₹0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>GST Amount:</span>
+                        <span id="display_gst">₹0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Total Amount:</span>
+                        <span id="display_total">₹0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bill Details Section -->
+            <div class="section">
+                <h2>Bill Details</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bill_date">Bill Date <span class="required">*</span></label>
+                        <input type="date" name="bill_date" id="bill_date" value="{{ bill['bill_date'] }}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="payment_status">Payment Status</label>
+                        <select name="payment_status" id="payment_status">
+                            <option value="Pending" {% if bill['payment_status'] == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Paid" {% if bill['payment_status'] == 'Paid' %}selected{% endif %}>Paid</option>
+                            <option value="Partial" {% if bill['payment_status'] == 'Partial' %}selected{% endif %}>Partial</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="payment_method">Payment Method</label>
+                        <select name="payment_method" id="payment_method">
+                            <option value="">Select Method</option>
+                            <option value="Cash" {% if bill['payment_method'] == 'Cash' %}selected{% endif %}>Cash</option>
+                            <option value="Card" {% if bill['payment_method'] == 'Card' %}selected{% endif %}>Card</option>
+                            <option value="UPI" {% if bill['payment_method'] == 'UPI' %}selected{% endif %}>UPI</option>
+                            <option value="Bank Transfer" {% if bill['payment_method'] == 'Bank Transfer' %}selected{% endif %}>Bank Transfer</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Notes</label>
+                        <textarea name="notes" id="notes" rows="3" placeholder="Additional notes...">{{ bill['notes'] or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hidden field for items data -->
+            <input type="hidden" name="items_data" id="items_data">
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">Update Bill</button>
+                <a href="{{ url_for('billing.index') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        const customers = {{ customers|tojson }};
+        const inventory = {{ inventory|tojson }};
+        const existingItems = {{ bill_items|tojson }};
+        let billItems = [];
+        
+        // Load existing customer data
+        window.addEventListener('DOMContentLoaded', function() {
+            const customerId = {{ bill['customer_id'] }};
+            selectCustomer(customerId);
+            
+            // Load existing bill items
+            existingItems.forEach(item => {
+                billItems.push({
+                    product_id: item.product_id,
+                    product_name: item.product_name,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    subtotal: item.subtotal,
+                    gst_percentage: item.gst_percentage,
+                    gst_amount: item.gst_amount,
+                    total: item.total
+                });
+            });
+            
+            renderItems();
+            updateTotals();
+        });
+        
+        // Customer Search
+        const customerSearch = document.getElementById('customerSearch');
+        const customerSearchResults = document.getElementById('customerSearchResults');
+        
+        customerSearch.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            if (query.length < 1) {
+                customerSearchResults.classList.remove('show');
+                return;
+            }
+            
+            const filtered = customers.filter(c =>
+                c.customer_id.toLowerCase().includes(query) ||
+                c.name.toLowerCase().includes(query)
+            );
+            
+            if (filtered.length > 0) {
+                customerSearchResults.innerHTML = filtered.map(c =>
+                    `<div class="search-result-item" onclick="selectCustomer(${c.id})">
+                        <strong>${c.customer_id}</strong> - ${c.name}
+                    </div>`
+                ).join('');
+                customerSearchResults.classList.add('show');
+            } else {
+                customerSearchResults.innerHTML = '<div class="search-result-item">No customers found</div>';
+                customerSearchResults.classList.add('show');
+            }
+        });
+        
+        function selectCustomer(customerId) {
+            fetch(`/billing/api/customer/${customerId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('customer_id').value = data.id;
+                    document.getElementById('customer_id_display').value = data.customer_id || '';
+                    document.getElementById('customer_name').value = data.name || '';
+                    document.getElementById('vendor_code').value = data.vendor_code || 'N/A';
+                    document.getElementById('state').value = data.state || 'N/A';
+                    customerSearch.value = `${data.customer_id} - ${data.name}`;
+                    customerSearchResults.classList.remove('show');
+                });
+        }
+        
+        function addItem() {
+            const productId = document.getElementById('product_select').value;
+            const quantity = parseInt(document.getElementById('item_quantity').value);
+            
+            if (!productId) {
+                alert('Please select a product');
+                return;
+            }
+            
+            if (!quantity || quantity < 1) {
+                alert('Please enter a valid quantity');
+                return;
+            }
+            
+            // Get product details
+            fetch(`/billing/api/product/${productId}`)
+                .then(response => response.json())
+                .then(product => {
+                    if (product.quantity < quantity) {
+                        alert(`Insufficient stock! Only ${product.quantity} units available.`);
+                        return;
+                    }
+                    
+                    // Calculate amounts
+                    const unitPrice = product.mrp;
+                    const subtotal = quantity * unitPrice;
+                    const gstAmount = (subtotal * product.gst_percentage) / 100;
+                    const total = subtotal + gstAmount;
+                    
+                    // Add to items array
+                    const item = {
+                        product_id: product.id,
+                        product_name: product.product_name,
+                        quantity: quantity,
+                        unit_price: unitPrice,
+                        subtotal: subtotal,
+                        gst_percentage: product.gst_percentage,
+                        gst_amount: gstAmount,
+                        total: total
+                    };
+                    
+                    billItems.push(item);
+                    renderItems();
+                    updateTotals();
+                    
+                    // Reset form
+                    document.getElementById('product_select').value = '';
+                    document.getElementById('item_quantity').value = '1';
+                });
+        }
+        
+        function removeItem(index) {
+            billItems.splice(index, 1);
+            renderItems();
+            updateTotals();
+        }
+        
+        function renderItems() {
+            const itemsList = document.getElementById('itemsList');
+            
+            if (billItems.length === 0) {
+                itemsList.innerHTML = '<div class="empty-items">No items added yet. Add items using the form above.</div>';
+                return;
+            }
+            
+            itemsList.innerHTML = billItems.map((item, index) => `
+                <div class="item-row">
+                    <div class="item-header">
+                        <strong>${item.product_name}</strong>
+                        <button type="button" class="btn btn-danger" onclick="removeItem(${index})">Remove</button>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-detail">
+                            <strong>Quantity</strong>
+                            ${item.quantity}
+                        </div>
+                        <div class="item-detail">
+                            <strong>Unit Price</strong>
+                            ₹${item.unit_price.toFixed(2)}
+                        </div>
+                        <div class="item-detail">
+                            <strong>Subtotal</strong>
+                            ₹${item.subtotal.toFixed(2)}
+                        </div>
+                        <div class="item-detail">
+                            <strong>GST (${item.gst_percentage}%)</strong>
+                            ₹${item.gst_amount.toFixed(2)}
+                        </div>
+                        <div class="item-detail">
+                            <strong>Total</strong>
+                            ₹${item.total.toFixed(2)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updateTotals() {
+            const subtotal = billItems.reduce((sum, item) => sum + item.subtotal, 0);
+            const gstAmount = billItems.reduce((sum, item) => sum + item.gst_amount, 0);
+            const total = billItems.reduce((sum, item) => sum + item.total, 0);
+            
+            document.getElementById('display_subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+            document.getElementById('display_gst').textContent = `₹${gstAmount.toFixed(2)}`;
+            document.getElementById('display_total').textContent = `₹${total.toFixed(2)}`;
+        }
+        
+        // Form submission
+        document.getElementById('billForm').addEventListener('submit', function(e) {
+            if (billItems.length === 0) {
+                e.preventDefault();
+                alert('Please add at least one item to the bill');
+                return;
+            }
+            
+            // Set items data as JSON
+            document.getElementById('items_data').value = JSON.stringify(billItems);
+        });
+        
+        // Close search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-box')) {
+                customerSearchResults.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

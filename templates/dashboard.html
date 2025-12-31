@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Management Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 3em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 20px;
+        }
+        
+        .dashboard-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        .dashboard-card.customers {
+            border-top: 5px solid #3498db;
+        }
+        
+        .dashboard-card.billing {
+            border-top: 5px solid #2ecc71;
+        }
+        
+        .dashboard-card.inventory {
+            border-top: 5px solid #e74c3c;
+        }
+        
+        .card-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .customers .card-icon {
+            color: #3498db;
+        }
+        
+        .billing .card-icon {
+            color: #2ecc71;
+        }
+        
+        .inventory .card-icon {
+            color: #e74c3c;
+        }
+        
+        .card-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .card-description {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: white;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Business Management System</h1>
+        
+        <div class="dashboard-grid">
+            <a href="{{ url_for('customers.index') }}" class="dashboard-card customers">
+                <div class="card-icon">👥</div>
+                <div class="card-title">Customer Management</div>
+                <div class="card-description">
+                    Add, view, and manage customer information. Keep track of customer details, contact information, and history.
+                </div>
+            </a>
+            
+            <a href="{{ url_for('billing.index') }}" class="dashboard-card billing">
+                <div class="card-icon">💰</div>
+                <div class="card-title">Billing & Invoices</div>
+                <div class="card-description">
+                    Create and manage bills, track payments, and generate invoices for your customers.
+                </div>
+            </a>
+            
+            <a href="{{ url_for('inventory.index') }}" class="dashboard-card inventory">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Inventory Management</div>
+                <div class="card-description">
+                    Manage your product inventory, track stock levels, and update pricing information.
+                </div>
+            </a>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2025 Business Management System. All rights reserved.</p>
+            <p style="margin-top: 10px;"><a href="{{ url_for('admin.index') }}" style="color: white; text-decoration: underline;">Admin Panel</a></p>
+        </div>
+    </div>
+</body>
+</html>

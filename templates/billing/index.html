@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing Management</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        h1 {
+            color: #333;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-info {
+            background: #3498db;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        
+        .btn-info:hover {
+            background: #2980b9;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-delete-selected {
+            background: #e74c3c;
+            color: white;
+            display: none;
+        }
+        
+        .btn-delete-selected:hover {
+            background: #c0392b;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #138496;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #2ecc71;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .bill-count {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .checkbox-cell {
+            width: 40px;
+            text-align: center;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .selection-info {
+            background: #d4edda;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .selection-info.show {
+            display: flex;
+        }
+        
+        .selection-text {
+            color: #155724;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Billing Management</h1>
+                <p class="bill-count">Total Bills: {{ bills|length }}</p>
+            </div>
+            <div class="button-group">
+                <button id="deleteSelectedBtn" class="btn btn-delete-selected no-print" onclick="deleteSelected()">Delete Selected</button>
+                <button onclick="downloadExcel()" class="btn btn-success no-print">📥 Download Excel</button>
+                <button onclick="window.print()" class="btn btn-info no-print">🖨️ Print</button>
+                <a href="{{ url_for('billing.create') }}" class="btn btn-primary no-print">+ Create Bill</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary no-print">← Back to Dashboard</a>
+            </div>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div id="selectionInfo" class="selection-info no-print">
+            <span class="selection-text"><span id="selectedCount">0</span> bill(s) selected</span>
+        </div>
+        
+        {% if bills %}
+            <form id="deleteForm" method="POST" action="{{ url_for('billing.delete_multiple') }}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell no-print">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                            </th>
+                            <th>Bill ID</th>
+                            <th>Customer Name</th>
+                            <th>Items</th>
+                            <th>Bill Date</th>
+                            <th>Total Amount (₹)</th>
+                            <th>Payment Status</th>
+                            <th>Payment Method</th>
+                            <th>Created Date</th>
+                            <th class="no-print">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in bills %}
+                        <tr>
+                            <td class="checkbox-cell no-print">
+                                <input type="checkbox" name="bill_ids[]" value="{{ bill['id'] }}" class="bill-checkbox" onchange="updateSelection()">
+                            </td>
+                            <td>#{{ bill['id'] }}</td>
+                            <td>{{ bill['customer_name'] }}</td>
+                            <td>{{ bill['item_count'] }} item(s)</td>
+                            <td>{{ bill['bill_date'] }}</td>
+                            <td>₹{{ "%.2f"|format(bill['total_amount']) }}</td>
+                            <td>
+                                <span class="status-badge status-{{ bill['payment_status']|lower }}">
+                                    {{ bill['payment_status'] }}
+                                </span>
+                            </td>
+                            <td>{{ bill['payment_method'] or 'N/A' }}</td>
+                            <td>{{ bill['created_at'] }}</td>
+                            <td class="no-print">
+                                <div style="display: flex; gap: 5px;">
+                                    <a href="{{ url_for('billing.view', id=bill['id']) }}" class="btn btn-info" style="padding: 6px 12px; font-size: 12px;">View</a>
+                                    <a href="{{ url_for('billing.update', bill_id=bill['id']) }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; background: #f39c12;">Edit</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        {% else %}
+            <div class="no-data">
+                <p>No bills found. Click "Create Bill" to get started!</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.bill-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+            updateSelection();
+        }
+        
+        function updateSelection() {
+            const checkboxes = document.querySelectorAll('.bill-checkbox:checked');
+            const count = checkboxes.length;
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            const selectionInfo = document.getElementById('selectionInfo');
+            const selectedCount = document.getElementById('selectedCount');
+            const selectAll = document.getElementById('selectAll');
+            
+            selectedCount.textContent = count;
+            
+            if (count > 0) {
+                deleteBtn.style.display = 'inline-block';
+                selectionInfo.classList.add('show');
+            } else {
+                deleteBtn.style.display = 'none';
+                selectionInfo.classList.remove('show');
+            }
+            
+            // Update select all checkbox
+            const allCheckboxes = document.querySelectorAll('.bill-checkbox');
+            selectAll.checked = allCheckboxes.length > 0 && count === allCheckboxes.length;
+        }
+        
+        function deleteSelected() {
+            const checkboxes = document.querySelectorAll('.bill-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('Please select at least one bill to delete.');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete ${checkboxes.length} bill(s)?`)) {
+                document.getElementById('deleteForm').submit();
+            }
+        }
+        
+        function downloadExcel() {
+            // Get table data
+            const table = document.querySelector('table');
+            const rows = [];
+            
+            // Get headers (excluding checkbox and actions columns)
+            const headers = [];
+            table.querySelectorAll('thead th').forEach((th, index) => {
+                if (!th.classList.contains('no-print')) {
+                    headers.push(th.textContent.trim());
+                }
+            });
+            rows.push(headers);
+            
+            // Get data rows (excluding checkbox and actions columns)
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const row = [];
+                tr.querySelectorAll('td').forEach((td, index) => {
+                    if (!td.classList.contains('no-print')) {
+                        row.push(td.textContent.trim());
+                    }
+                });
+                rows.push(row);
+            });
+            
+            // Create workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            
+            // Set column widths
+            ws['!cols'] = [
+                {wch: 5},   // ID
+                {wch: 25},  // Customer Name
+                {wch: 10},  // Items
+                {wch: 15},  // Bill Date
+                {wch: 15},  // Total Amount
+                {wch: 15},  // Payment Status
+                {wch: 15},  // Payment Method
+                {wch: 20}   // Created Date
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Bills');
+            
+            // Generate filename with current date
+            const date = new Date().toISOString().split('T')[0];
+            const filename = `bills_${date}.xlsx`;
+            
+            // Download file
+            XLSX.writeFile(wb, filename);
+        }
+    </script>
+</body>
+</html>
