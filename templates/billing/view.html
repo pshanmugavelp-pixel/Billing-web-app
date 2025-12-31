@@ -327,13 +327,14 @@
             </thead>
             <tbody>
                 {% for item in items %}
+                {% set item_subtotal = item['quantity'] * item['unit_price'] %}
                 <tr>
                     <td>{{ loop.index }}</td>
                     <td>{{ item['inventory_product_id'] or 'N/A' }}</td>
                     <td><strong>{{ item['product_name'] }}</strong></td>
                     <td>{{ item['quantity'] }}</td>
                     <td>₹{{ "%.2f"|format(item['unit_price']) }}</td>
-                    <td>₹{{ "%.2f"|format(item['subtotal']) }}</td>
+                    <td>₹{{ "%.2f"|format(item_subtotal) }}</td>
                     <td>{% if item['cgst'] > 0 %}{{ "%.2f"|format(item['gst_percentage'] / 2) }}% - ₹{{ "%.2f"|format(item['cgst']) }}{% else %}-{% endif %}</td>
                     <td>{% if item['sgst'] > 0 %}{{ "%.2f"|format(item['gst_percentage'] / 2) }}% - ₹{{ "%.2f"|format(item['sgst']) }}{% else %}-{% endif %}</td>
                     <td>{% if item['igst'] > 0 %}{{ "%.2f"|format(item['gst_percentage']) }}% - ₹{{ "%.2f"|format(item['igst']) }}{% else %}-{% endif %}</td>
