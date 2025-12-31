@@ -271,6 +271,43 @@ def view(id):
     conn.close()
     return render_template('billing/view.html', bill=bill_dict, items=items, seller=seller)
 
+@billing_bp.route('/print/<int:id>')
+def print_bill(id):
+    """Print-friendly view of bill details"""
+    conn = get_db_connection()
+    bill = conn.execute('''
+        SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
+        FROM billing b
+        JOIN customers c ON b.customer_id = c.id
+        WHERE b.id = ?
+    ''', (id,)).fetchone()
+    
+    if not bill:
+        flash('Bill not found!', 'error')
+        conn.close()
+        return redirect(url_for('billing.index'))
+    
+    # Convert bill to dict and format date
+    bill_dict = dict(bill)
+    if bill_dict['bill_date']:
+        # Convert YYYY-MM-DD to DD-MM-YYYY
+        date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
+        bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+    
+    items = conn.execute('''
+        SELECT bi.*, i.product_id as inventory_product_id
+        FROM billing_items bi
+        LEFT JOIN inventory i ON bi.product_id = i.id
+        WHERE bi.bill_id = ?
+        ORDER BY bi.id
+    ''', (id,)).fetchall()
+    
+    # Get seller information
+    seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+    
+    conn.close()
+    return render_template('billing/print.html', bill=bill_dict, items=items, seller=seller)
+
 @billing_bp.route('/update/<int:bill_id>', methods=['GET', 'POST'])
 def update(bill_id):
     """Update an existing bill with multiple items"""

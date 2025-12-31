@@ -196,7 +196,7 @@
         <div class="header">
             <h1>Bill #{{ bill['id'] }}</h1>
             <div class="no-print">
-                <button onclick="window.print()" class="btn btn-info">🖨️ Print</button>
+                <a href="{{ url_for('billing.print_bill', id=bill['id']) }}" target="_blank" class="btn btn-info">🖨️ Print</a>
                 <a href="{{ url_for('billing.index') }}" class="btn btn-secondary">← Back to Bills</a>
             </div>
         </div>
