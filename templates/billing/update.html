@@ -506,12 +506,11 @@
                         <div class="item-detail" style="grid-column: span 2;">
                             <strong>Quantity</strong>
                             <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
-                                <button type="button" class="btn btn-secondary" onclick="decreaseQuantity(${index})"
-                                        style="padding: 8px 16px; font-size: 18px; font-weight: bold;"
-                                        ${item.quantity <= 1 ? 'disabled' : ''}>−</button>
-                                <span style="font-size: 20px; font-weight: bold; min-width: 40px; text-align: center;">${item.quantity}</span>
-                                <button type="button" class="btn btn-success" onclick="increaseQuantity(${index})"
-                                        style="padding: 8px 16px; font-size: 18px; font-weight: bold;">+</button>
+                                <input type="number"
+                                       value="${item.quantity}"
+                                       min="0"
+                                       onchange="updateQuantity(${index}, this.value)"
+                                       style="width: 80px; padding: 8px; font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #3498db; border-radius: 5px;">
                                 ${changeIndicator}
                             </div>
                         </div>
@@ -532,20 +531,30 @@
             `}).join('');
         }
         
-        function increaseQuantity(index) {
-            billItems[index].quantity += 1;
+        function updateQuantity(index, newValue) {
+            const quantity = parseInt(newValue) || 0;
+            
+            if (quantity < 0) {
+                alert('Quantity cannot be negative!');
+                renderItems();
+                return;
+            }
+            
+            if (quantity === 0) {
+                if (confirm('Setting quantity to 0 will remove this item from the bill. Continue?')) {
+                    billItems.splice(index, 1);
+                    renderItems();
+                    updateTotals();
+                } else {
+                    renderItems();
+                }
+                return;
+            }
+            
+            billItems[index].quantity = quantity;
             recalculateItem(index);
             renderItems();
             updateTotals();
-        }
-        
-        function decreaseQuantity(index) {
-            if (billItems[index].quantity > 1) {
-                billItems[index].quantity -= 1;
-                recalculateItem(index);
-                renderItems();
-                updateTotals();
-            }
         }
         
         function recalculateItem(index) {
