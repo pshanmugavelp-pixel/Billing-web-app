@@ -185,14 +185,14 @@ def create():
                              payment_status, notes))
         
         # Get the auto-generated numeric ID for the bill
-        new_bill_id = cursor.lastrowid
+        new_bill_numeric_id = cursor.lastrowid
         
-        # Insert bill items and update inventory (use numeric bill ID)
+        # Insert bill items and update inventory (use TEXT bill_id, not numeric ID)
         for item in items:
             conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
                            unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (new_bill_id, item['product_id'], item['product_name'], item['quantity'],
+                        (bill_id, item['product_id'], item['product_name'], item['quantity'],
                          item['unit_price'], item['gst_percentage'],
                          item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
                          item.get('igst', 0), item['total']))
