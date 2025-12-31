@@ -73,15 +73,31 @@ def create():
             conn.close()
             return redirect(url_for('billing.create'))
         
-        # Check inventory for all items
+        # Group items by product_id and sum quantities for duplicate products
+        product_quantities = {}
         for item in items:
-            product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?', 
-                                 (item['product_id'],)).fetchone()
+            product_id = item['product_id']
+            if product_id in product_quantities:
+                product_quantities[product_id]['total_quantity'] += item['quantity']
+            else:
+                product_quantities[product_id] = {
+                    'total_quantity': item['quantity'],
+                    'product_name': item['product_name']
+                }
+        
+        # Check inventory for all products (considering total quantities)
+        for product_id, data in product_quantities.items():
+            product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
+                                 (product_id,)).fetchone()
             if product:
-                if product['quantity'] < item['quantity']:
-                    flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Only {product["quantity"]} available!', 'error')
+                if product['quantity'] < data['total_quantity']:
+                    flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Requested: {data["total_quantity"]}, Available: {product["quantity"]}', 'error')
                     conn.close()
                     return redirect(url_for('billing.create'))
+            else:
+                flash(f'Product {data["product_name"]} not found in inventory!', 'error')
+                conn.close()
+                return redirect(url_for('billing.create'))
         
         # Calculate totals
         subtotal = sum(float(item['subtotal']) for item in items)
@@ -358,20 +374,41 @@ def update(bill_id):
             conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
                         (old_item['quantity'], old_item['product_id']))
         
-        # Check inventory for all new items
+        # Group items by product_id and sum quantities for duplicate products
+        product_quantities = {}
         for item in items:
+            product_id = item['product_id']
+            if product_id in product_quantities:
+                product_quantities[product_id]['total_quantity'] += item['quantity']
+            else:
+                product_quantities[product_id] = {
+                    'total_quantity': item['quantity'],
+                    'product_name': item['product_name']
+                }
+        
+        # Check inventory for all new items (considering total quantities)
+        for product_id, data in product_quantities.items():
             product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
-                                 (item['product_id'],)).fetchone()
+                                 (product_id,)).fetchone()
             if product:
-                if product['quantity'] < item['quantity']:
+                if product['quantity'] < data['total_quantity']:
                     # Restore the old quantities back since we're not proceeding
                     for old_item in old_items:
                         conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
                                     (old_item['quantity'], old_item['product_id']))
                     conn.commit()
-                    flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Only {product["quantity"]} available!', 'error')
+                    flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Requested: {data["total_quantity"]}, Available: {product["quantity"]}', 'error')
                     conn.close()
                     return redirect(url_for('billing.update', bill_id=bill_id))
+            else:
+                # Restore the old quantities back since we're not proceeding
+                for old_item in old_items:
+                    conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
+                                (old_item['quantity'], old_item['product_id']))
+                conn.commit()
+                flash(f'Product {data["product_name"]} not found in inventory!', 'error')
+                conn.close()
+                return redirect(url_for('billing.update', bill_id=bill_id))
         
         # Calculate totals
         subtotal = sum(float(item['quantity']) * float(item['unit_price']) for item in items)
