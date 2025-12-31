@@ -44,6 +44,7 @@ def init_db():
             manufacture_date DATE,
             expiry_month TEXT NOT NULL,
             quantity INTEGER NOT NULL DEFAULT 0,
+            buy_price REAL NOT NULL DEFAULT 0.0,
             unit_price REAL NOT NULL DEFAULT 0.0,
             mrp REAL NOT NULL DEFAULT 0.0,
             gst_percentage REAL NOT NULL DEFAULT 0.0,
@@ -51,6 +52,14 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Add buy_price column to existing inventory table if it doesn't exist
+    try:
+        conn.execute('SELECT buy_price FROM inventory LIMIT 1')
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it with default value 0.0
+        conn.execute('ALTER TABLE inventory ADD COLUMN buy_price REAL NOT NULL DEFAULT 0.0')
+        conn.commit()
     
     # Billing table (header - one per bill)
     conn.execute('''

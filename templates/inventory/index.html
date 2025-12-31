@@ -283,6 +283,7 @@
                             <th>Mfg Date</th>
                             <th>Expiry</th>
                             <th>Quantity</th>
+                            <th>Buy Price (₹)</th>
                             <th>Unit Price (₹)</th>
                             <th>MRP (₹)</th>
                             <th>GST (%)</th>
@@ -307,6 +308,7 @@
                                     {{ item['quantity'] }}
                                 </span>
                             </td>
+                            <td>₹{{ "%.2f"|format(item['buy_price']) }}</td>
                             <td>₹{{ "%.2f"|format(item['unit_price']) }}</td>
                             <td>₹{{ "%.2f"|format(item['mrp']) }}</td>
                             <td>{{ "%.2f"|format(item['gst_percentage']) }}%</td>
@@ -407,6 +409,7 @@
                 {wch: 15},  // Mfg Date
                 {wch: 15},  // Expiry
                 {wch: 10},  // Quantity
+                {wch: 12},  // Buy Price
                 {wch: 12},  // Unit Price
                 {wch: 12},  // MRP
                 {wch: 10},  // GST%

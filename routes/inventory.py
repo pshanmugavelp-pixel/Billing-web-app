@@ -26,6 +26,7 @@ def add():
         manufacture_date = request.form.get('manufacture_date', '')
         expiry_month = request.form['expiry_month']
         quantity = request.form.get('quantity', 0)
+        buy_price = request.form.get('buy_price', 0.0)
         unit_price = request.form.get('unit_price', 0.0)
         mrp = request.form.get('mrp', 0.0)
         gst_percentage = request.form.get('gst_percentage', 0.0)
@@ -43,9 +44,9 @@ def add():
             conn.close()
             return redirect(url_for('inventory.add'))
         
-        conn.execute('''INSERT INTO inventory (product_id, product_name, hsn_code, manufacture_date, expiry_month, quantity, unit_price, mrp, gst_percentage)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                     (product_id, product_name, hsn_code, manufacture_date, expiry_month, quantity, unit_price, mrp, gst_percentage))
+        conn.execute('''INSERT INTO inventory (product_id, product_name, hsn_code, manufacture_date, expiry_month, quantity, buy_price, unit_price, mrp, gst_percentage)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                     (product_id, product_name, hsn_code, manufacture_date, expiry_month, quantity, buy_price, unit_price, mrp, gst_percentage))
         conn.commit()
         conn.close()
         
@@ -95,6 +96,7 @@ def update(id):
         manufacture_date = request.form.get('manufacture_date', '')
         expiry_month = request.form['expiry_month']
         quantity = request.form.get('quantity', 0)
+        buy_price = request.form.get('buy_price', 0.0)
         unit_price = request.form.get('unit_price', 0.0)
         mrp = request.form.get('mrp', 0.0)
         gst_percentage = request.form.get('gst_percentage', 0.0)
@@ -112,9 +114,9 @@ def update(id):
             return redirect(url_for('inventory.update', id=id))
         
         conn.execute('''UPDATE inventory SET product_id = ?, product_name = ?, hsn_code = ?, manufacture_date = ?,
-                        expiry_month = ?, quantity = ?, unit_price = ?, mrp = ?, gst_percentage = ?,
+                        expiry_month = ?, quantity = ?, buy_price = ?, unit_price = ?, mrp = ?, gst_percentage = ?,
                         updated_at = CURRENT_TIMESTAMP WHERE id = ?''',
-                     (product_id, product_name, hsn_code, manufacture_date, expiry_month, quantity, unit_price, mrp, gst_percentage, id))
+                     (product_id, product_name, hsn_code, manufacture_date, expiry_month, quantity, buy_price, unit_price, mrp, gst_percentage, id))
         conn.commit()
         conn.close()
         
