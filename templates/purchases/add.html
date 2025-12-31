@@ -152,14 +152,17 @@
         
         <div class="info-box">
             <p><strong>Note:</strong> Product ID will be auto-generated.</p>
+            <p>Start typing product name to see suggestions from existing inventory.</p>
             <p>If a product with the same name and manufacture date exists, the quantity will be added to existing stock.</p>
-            <p>Otherwise, a new product will be created in inventory.</p>
         </div>
         
         <form method="POST">
             <div class="form-group">
                 <label for="product_name">Product Name <span class="required">*</span></label>
-                <input type="text" name="product_name" id="product_name" required>
+                <div style="position: relative;">
+                    <input type="text" name="product_name" id="product_name" autocomplete="off" required>
+                    <div id="productSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #3498db; border-top: none; border-radius: 0 0 5px 5px; max-height: 200px; overflow-y: auto; z-index: 1000;"></div>
+                </div>
             </div>
             
             <div class="form-row">
@@ -225,6 +228,81 @@
     <script>
         // Set today's date as default
         document.getElementById('purchase_date').valueAsDate = new Date();
+        
+        // Product name autocomplete
+        const productNameInput = document.getElementById('product_name');
+        const suggestionsDiv = document.getElementById('productSuggestions');
+        let inventoryProducts = [];
+        
+        // Fetch inventory products on page load
+        fetch('/inventory/api/products')
+            .then(response => response.json())
+            .then(data => {
+                inventoryProducts = data;
+            })
+            .catch(error => console.error('Error fetching products:', error));
+        
+        productNameInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            
+            if (query.length < 1) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            const filtered = inventoryProducts.filter(p =>
+                p.product_name.toLowerCase().includes(query)
+            );
+            
+            if (filtered.length > 0) {
+                suggestionsDiv.innerHTML = filtered.map(p =>
+                    `<div class="suggestion-item" style="padding: 12px; cursor: pointer; border-bottom: 1px solid #eee;"
+                          data-product='${JSON.stringify(p)}'>
+                        <strong>${p.product_name}</strong><br>
+                        <small style="color: #666;">ID: ${p.product_id} | HSN: ${p.hsn_code || 'N/A'} | Price: ₹${p.unit_price}</small>
+                    </div>`
+                ).join('');
+                suggestionsDiv.style.display = 'block';
+                
+                // Add click handlers to suggestions
+                document.querySelectorAll('.suggestion-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const product = JSON.parse(this.dataset.product);
+                        fillProductDetails(product);
+                        suggestionsDiv.style.display = 'none';
+                    });
+                    
+                    item.addEventListener('mouseenter', function() {
+                        this.style.background = '#f5f5f5';
+                    });
+                    
+                    item.addEventListener('mouseleave', function() {
+                        this.style.background = 'white';
+                    });
+                });
+            } else {
+                suggestionsDiv.innerHTML = '<div style="padding: 12px; color: #666;">No products found</div>';
+                suggestionsDiv.style.display = 'block';
+            }
+        });
+        
+        // Fill product details from inventory (excluding expiry, manufacture, quantity)
+        function fillProductDetails(product) {
+            document.getElementById('product_name').value = product.product_name;
+            document.getElementById('hsn_code').value = product.hsn_code || '';
+            document.getElementById('buy_price').value = product.buy_price || '';
+            document.getElementById('unit_price').value = product.unit_price || '';
+            document.getElementById('mrp').value = product.mrp || '';
+            document.getElementById('gst_percentage').value = product.gst_percentage || '';
+            // Note: expiry_month, manufacture_month, and quantity are NOT filled
+        }
+        
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!productNameInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>

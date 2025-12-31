@@ -3,7 +3,7 @@ Inventory routes module
 Handles all inventory-related routes
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from database import get_db_connection
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -17,6 +17,17 @@ def index():
     items = conn.execute('SELECT * FROM inventory ORDER BY created_at DESC').fetchall()
     conn.close()
     return render_template('inventory/index.html', items=items)
+
+@inventory_bp.route('/api/products')
+def api_products():
+    """API endpoint to get all products for autocomplete"""
+    conn = get_db_connection()
+    products = conn.execute('SELECT * FROM inventory ORDER BY product_name').fetchall()
+    conn.close()
+    
+    # Convert to list of dicts
+    products_list = [dict(row) for row in products]
+    return jsonify(products_list)
 
 @inventory_bp.route('/api/next-product-id')
 def next_product_id():
@@ -41,7 +52,6 @@ def next_product_id():
     
     conn.close()
     
-    from flask import jsonify
     return jsonify({'product_id': product_id})
 
 @inventory_bp.route('/add', methods=['GET', 'POST'])
