@@ -7,7 +7,7 @@
     <style>
         @page {
             size: A5;
-            margin: 8mm;
+            margin: 10mm;
         }
         
         * {
@@ -17,142 +17,71 @@
         }
         
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            font-size: 8px;
-            line-height: 1.3;
-            color: #333;
-            background: #f5f5f5;
-            padding: 3mm;
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            color: #000;
+            background: white;
+            padding: 5mm;
         }
         
-        .invoice-container {
-            max-width: 132mm;
+        .invoice {
+            max-width: 128mm;
             margin: 0 auto;
             background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 4mm;
             text-align: center;
-            border-radius: 3mm 3mm 0 0;
+            margin-bottom: 5mm;
+            padding-bottom: 3mm;
+            border-bottom: 2px solid #1e3a8a;
         }
         
         .header h1 {
-            font-size: 14px;
-            margin-bottom: 1mm;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 16px;
+            background: linear-gradient(90deg, #059669 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2mm;
+            font-weight: bold;
         }
         
-        .header .company-details {
-            font-size: 7px;
+        .header-info {
+            font-size: 8px;
+            color: #000;
             line-height: 1.4;
-            opacity: 0.95;
-        }
-        
-        .invoice-title-bar {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 2mm 3mm;
-            margin: 3mm;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         
         .invoice-title {
-            font-size: 11px;
+            text-align: center;
+            font-size: 12px;
             font-weight: bold;
-            color: #667eea;
-        }
-        
-        .invoice-meta {
-            font-size: 8px;
-            color: #666;
-        }
-        
-        .content-section {
-            padding: 0 3mm 3mm 3mm;
-        }
-        
-        .section-title {
-            font-size: 9px;
-            font-weight: bold;
-            color: #667eea;
-            padding: 2mm 0 1mm 0;
-            border-bottom: 2px solid #667eea;
-            margin-bottom: 2mm;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2mm;
-            margin-bottom: 3mm;
-        }
-        
-        .info-box {
-            background: #f8f9fa;
-            padding: 2mm;
-            border-radius: 2mm;
-            border-left: 3px solid #667eea;
-        }
-        
-        .info-box.full-width {
-            grid-column: 1 / -1;
-        }
-        
-        .info-label {
-            font-size: 7px;
-            color: #666;
-            font-weight: bold;
-            margin-bottom: 0.5mm;
-            text-transform: uppercase;
-        }
-        
-        .info-value {
-            font-size: 8px;
-            color: #333;
-            font-weight: 500;
+            color: #1e3a8a;
+            margin: 3mm 0;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 2mm 0;
-            font-size: 7px;
-        }
-        
-        table thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            margin: 3mm 0;
         }
         
         table th {
-            padding: 2mm 1mm;
+            background: #1e3a8a;
+            color: white;
+            padding: 2mm;
             text-align: left;
-            font-weight: 600;
-            font-size: 7px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
+            font-size: 8px;
+            font-weight: bold;
+            border: 1px solid #1e3a8a;
         }
         
         table td {
-            padding: 1.5mm 1mm;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        table tbody tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-        
-        table tbody tr:hover {
-            background: #e3f2fd;
+            padding: 2mm;
+            border: 1px solid #ddd;
+            font-size: 8px;
+            color: #000;
         }
         
         .text-right {
@@ -163,76 +92,53 @@
             text-align: center;
         }
         
-        .totals-section {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 3mm;
-            border-radius: 2mm;
-            margin: 3mm 0;
-            border: 2px solid #667eea;
-        }
-        
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 1.5mm 0;
-            font-size: 8px;
-            color: #333;
-        }
-        
-        .total-row.subtotal {
-            border-bottom: 1px solid #dee2e6;
-        }
-        
-        .total-row.grand-total {
-            font-size: 11px;
+        .section-title {
+            font-size: 10px;
             font-weight: bold;
-            color: #667eea;
-            margin-top: 2mm;
-            padding-top: 2mm;
-            border-top: 2px solid #667eea;
+            color: #1e3a8a;
+            margin: 3mm 0 2mm 0;
+            padding-bottom: 1mm;
+            border-bottom: 1px solid #1e3a8a;
         }
         
-        .notes-section {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 2mm;
-            margin: 2mm 0;
-            border-radius: 2mm;
+        .totals {
+            margin-top: 3mm;
+            float: right;
+            width: 50%;
         }
         
-        .notes-title {
-            font-size: 8px;
+        .totals table td {
+            padding: 1.5mm;
+        }
+        
+        .grand-total {
             font-weight: bold;
-            color: #856404;
-            margin-bottom: 1mm;
+            font-size: 10px;
+            background: #f9f9f9;
         }
         
-        .notes-content {
-            font-size: 7px;
-            color: #856404;
+        .grand-total td {
+            color: #059669;
+            border-top: 2px solid #059669;
         }
         
-        .bank-section {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 2mm;
-            margin: 2mm 0;
-            border-radius: 2mm;
+        .bank-details {
+            clear: both;
+            margin-top: 5mm;
+        }
+        
+        .bank-details table td {
+            color: #059669;
+            font-weight: bold;
         }
         
         .footer {
-            background: #f8f9fa;
-            padding: 3mm;
             text-align: center;
+            margin-top: 5mm;
+            padding-top: 3mm;
+            border-top: 1px solid #ddd;
             font-size: 7px;
             color: #666;
-            border-top: 2px solid #667eea;
-            margin-top: 3mm;
-        }
-        
-        .footer-highlight {
-            color: #667eea;
-            font-weight: bold;
         }
         
         .print-button {
@@ -240,203 +146,179 @@
             top: 10px;
             right: 10px;
             padding: 10px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1e3a8a;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: bold;
             z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
         }
         
         .print-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+            background: #1e40af;
         }
         
         @media print {
             body {
-                background: white;
                 padding: 0;
             }
             
             .print-button {
                 display: none;
             }
-            
-            .invoice-container {
-                box-shadow: none;
-            }
         }
     </style>
 </head>
 <body>
-    <button class="print-button" onclick="window.print()">🖨️ Print Invoice</button>
+    <button class="print-button" onclick="window.print()">🖨️ Print</button>
     
-    <div class="invoice-container">
+    <div class="invoice">
         <!-- Header -->
         <div class="header">
             {% if seller %}
             <h1>{{ seller['seller_name'] }}</h1>
-            <div class="company-details">
+            <div class="header-info">
                 {{ seller['address'] }}<br>
-                📧 {{ seller['email'] }} | 📱 {{ seller['mobile'] }}<br>
+                Email: {{ seller['email'] }} | Mobile: {{ seller['mobile'] }}<br>
                 GST: {{ seller['gst_number'] }}
             </div>
             {% endif %}
         </div>
         
-        <!-- Invoice Title Bar -->
-        <div class="invoice-title-bar">
-            <div class="invoice-title">TAX INVOICE</div>
-            <div class="invoice-meta">
-                <strong>Invoice:</strong> {{ bill['bill_id'] }}<br>
-                <strong>Date:</strong> {{ bill['bill_date'] }}
-            </div>
+        <div class="invoice-title">TAX INVOICE</div>
+        
+        <!-- Invoice & Customer Details -->
+        <table>
+            <tr>
+                <th colspan="2">Invoice Details</th>
+                <th colspan="2">Customer Details</th>
+            </tr>
+            <tr>
+                <td><strong>Invoice No:</strong></td>
+                <td>{{ bill['bill_id'] }}</td>
+                <td><strong>Name:</strong></td>
+                <td>{{ bill['customer_name'] }}</td>
+            </tr>
+            <tr>
+                <td><strong>Date:</strong></td>
+                <td>{{ bill['bill_date'] }}</td>
+                <td><strong>Mobile:</strong></td>
+                <td>{{ bill['mobile'] or 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Payment:</strong></td>
+                <td>{{ bill['payment_status'] }}</td>
+                <td><strong>GST No:</strong></td>
+                <td>{{ bill['gst_number'] or 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td colspan="2"></td>
+                <td><strong>Address:</strong></td>
+                <td>{{ bill['address'] or 'N/A' }}</td>
+            </tr>
+        </table>
+        
+        <!-- Items -->
+        <div class="section-title">Items</div>
+        {% set has_igst = items|selectattr('igst', 'greaterthan', 0)|list|length > 0 %}
+        {% set has_cgst_sgst = items|selectattr('cgst', 'greaterthan', 0)|list|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 40%;">Product Name</th>
+                    <th style="width: 10%;" class="text-center">Qty</th>
+                    <th style="width: 12%;" class="text-right">Price</th>
+                    <th style="width: 12%;" class="text-right">Taxable</th>
+                    {% if has_cgst_sgst %}
+                    <th style="width: 10%;" class="text-right">CGST</th>
+                    <th style="width: 10%;" class="text-right">SGST</th>
+                    {% endif %}
+                    {% if has_igst %}
+                    <th style="width: 10%;" class="text-right">IGST</th>
+                    {% endif %}
+                    <th style="width: 13%;" class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                {% set item_subtotal = item['quantity'] * item['unit_price'] %}
+                <tr>
+                    <td class="text-center">{{ loop.index }}</td>
+                    <td>{{ item['product_name'] }}</td>
+                    <td class="text-center">{{ item['quantity'] }}</td>
+                    <td class="text-right">₹{{ "%.2f"|format(item['unit_price']) }}</td>
+                    <td class="text-right">₹{{ "%.2f"|format(item_subtotal) }}</td>
+                    {% if has_cgst_sgst %}
+                    <td class="text-right">
+                        {% if item['cgst'] > 0 %}₹{{ "%.2f"|format(item['cgst']) }}{% else %}-{% endif %}
+                    </td>
+                    <td class="text-right">
+                        {% if item['sgst'] > 0 %}₹{{ "%.2f"|format(item['sgst']) }}{% else %}-{% endif %}
+                    </td>
+                    {% endif %}
+                    {% if has_igst %}
+                    <td class="text-right">
+                        {% if item['igst'] > 0 %}₹{{ "%.2f"|format(item['igst']) }}{% else %}-{% endif %}
+                    </td>
+                    {% endif %}
+                    <td class="text-right"><strong>₹{{ "%.2f"|format(item['total']) }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Totals -->
+        <div class="totals">
+            <table>
+                <tr>
+                    <td>Taxable Value:</td>
+                    <td class="text-right">₹{{ "%.2f"|format(bill['subtotal']) }}</td>
+                </tr>
+                <tr>
+                    <td>GST Amount:</td>
+                    <td class="text-right">₹{{ "%.2f"|format(bill['gst_amount']) }}</td>
+                </tr>
+                <tr class="grand-total">
+                    <td><strong>GRAND TOTAL:</strong></td>
+                    <td class="text-right"><strong>₹{{ "%.2f"|format(bill['total_amount']) }}</strong></td>
+                </tr>
+            </table>
         </div>
         
-        <div class="content-section">
-            <!-- Customer Information -->
-            <div class="section-title">Bill To</div>
-            <div class="info-grid">
-                <div class="info-box">
-                    <div class="info-label">Customer Name</div>
-                    <div class="info-value">{{ bill['customer_name'] }}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-label">GST Number</div>
-                    <div class="info-value">{{ bill['gst_number'] or 'N/A' }}</div>
-                </div>
-                <div class="info-box full-width">
-                    <div class="info-label">Address</div>
-                    <div class="info-value">{{ bill['address'] or 'N/A' }}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-label">Email</div>
-                    <div class="info-value">{{ bill['email'] or 'N/A' }}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-label">Mobile</div>
-                    <div class="info-value">{{ bill['mobile'] or 'N/A' }}</div>
-                </div>
+        {% if bill['notes'] %}
+        <div style="clear: both; margin-top: 3mm;">
+            <div class="section-title">Notes</div>
+            <div style="padding: 2mm; border: 1px solid #ddd; font-size: 8px;">
+                {{ bill['notes'] }}
             </div>
-            
-            <!-- Items Table -->
-            <div class="section-title">Items</div>
-            {% set has_igst = items|selectattr('igst', 'greaterthan', 0)|list|length > 0 %}
-            {% set has_cgst_sgst = items|selectattr('cgst', 'greaterthan', 0)|list|length > 0 %}
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 5%;">#</th>
-                        <th style="width: 35%;">Product Name</th>
-                        <th style="width: 10%;" class="text-center">Qty</th>
-                        <th style="width: 12%;" class="text-right">Unit Price</th>
-                        <th style="width: 12%;" class="text-right">Tax Value</th>
-                        {% if has_cgst_sgst %}
-                        <th style="width: 10%;" class="text-right">CGST</th>
-                        <th style="width: 10%;" class="text-right">SGST</th>
-                        {% endif %}
-                        {% if has_igst %}
-                        <th style="width: 10%;" class="text-right">IGST</th>
-                        {% endif %}
-                        <th style="width: 13%;" class="text-right">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in items %}
-                    {% set item_subtotal = item['quantity'] * item['unit_price'] %}
-                    <tr>
-                        <td class="text-center">{{ loop.index }}</td>
-                        <td><strong>{{ item['product_name'] }}</strong></td>
-                        <td class="text-center">{{ item['quantity'] }}</td>
-                        <td class="text-right">₹{{ "%.2f"|format(item['unit_price']) }}</td>
-                        <td class="text-right">₹{{ "%.2f"|format(item_subtotal) }}</td>
-                        {% if has_cgst_sgst %}
-                        <td class="text-right">
-                            {% if item['cgst'] > 0 %}
-                            {{ "%.1f"|format(item['gst_percentage'] / 2) }}%<br>₹{{ "%.2f"|format(item['cgst']) }}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        <td class="text-right">
-                            {% if item['sgst'] > 0 %}
-                            {{ "%.1f"|format(item['gst_percentage'] / 2) }}%<br>₹{{ "%.2f"|format(item['sgst']) }}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        {% endif %}
-                        {% if has_igst %}
-                        <td class="text-right">
-                            {% if item['igst'] > 0 %}
-                            {{ "%.1f"|format(item['gst_percentage']) }}%<br>₹{{ "%.2f"|format(item['igst']) }}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        {% endif %}
-                        <td class="text-right"><strong>₹{{ "%.2f"|format(item['total']) }}</strong></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            
-            <!-- Totals -->
-            <div class="totals-section">
-                <div class="total-row subtotal">
-                    <span>Taxable Value:</span>
-                    <span><strong>₹{{ "%.2f"|format(bill['subtotal']) }}</strong></span>
-                </div>
-                <div class="total-row subtotal">
-                    <span>Total GST Amount:</span>
-                    <span><strong>₹{{ "%.2f"|format(bill['gst_amount']) }}</strong></span>
-                </div>
-                <div class="total-row grand-total">
-                    <span>GRAND TOTAL:</span>
-                    <span>₹{{ "%.2f"|format(bill['total_amount']) }}</span>
-                </div>
-            </div>
-            
-            {% if bill['notes'] %}
-            <div class="notes-section">
-                <div class="notes-title">📝 NOTES</div>
-                <div class="notes-content">{{ bill['notes'] }}</div>
-            </div>
-            {% endif %}
-            
-            {% if seller %}
-            <div class="section-title">Bank Details</div>
-            <div class="bank-section">
-                <div class="info-grid">
-                    <div class="info-box">
-                        <div class="info-label">Account Name</div>
-                        <div class="info-value">{{ seller['account_name'] }}</div>
-                    </div>
-                    <div class="info-box">
-                        <div class="info-label">Account Number</div>
-                        <div class="info-value">{{ seller['account_number'] }}</div>
-                    </div>
-                    <div class="info-box">
-                        <div class="info-label">IFSC Code</div>
-                        <div class="info-value">{{ seller['ifsc_code'] }}</div>
-                    </div>
-                    <div class="info-box">
-                        <div class="info-label">Bank & Branch</div>
-                        <div class="info-value">{{ seller['account_type'] }} - {{ seller['branch'] }}</div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
         </div>
+        {% endif %}
+        
+        <!-- Bank Details -->
+        {% if seller %}
+        <div class="bank-details">
+            <div class="section-title">Bank Details</div>
+            <table>
+                <tr>
+                    <td style="width: 25%;"><strong>Account Name:</strong></td>
+                    <td style="width: 25%;">{{ seller['account_name'] }}</td>
+                    <td style="width: 25%;"><strong>Account Number:</strong></td>
+                    <td style="width: 25%;">{{ seller['account_number'] }}</td>
+                </tr>
+                <tr>
+                    <td><strong>IFSC Code:</strong></td>
+                    <td>{{ seller['ifsc_code'] }}</td>
+                    <td><strong>Bank & Branch:</strong></td>
+                    <td>{{ seller['account_type'] }} - {{ seller['branch'] }}</td>
+                </tr>
+            </table>
+        </div>
+        {% endif %}
         
         <div class="footer">
-            <p>This is a <span class="footer-highlight">computer-generated invoice</span> and does not require a signature.</p>
-            <p style="margin-top: 1mm;">Thank you for your business! 🙏</p>
+            <p>This is a computer-generated invoice. Thank you for your business!</p>
         </div>
     </div>
 </body>
