@@ -17,63 +17,90 @@
         }
         
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 8px;
-            line-height: 1.2;
-            color: #000;
-            background: white;
+            line-height: 1.3;
+            color: #333;
+            background: #f5f5f5;
             padding: 3mm;
         }
         
         .invoice-container {
             max-width: 132mm;
             margin: 0 auto;
-            border: 1px solid #000;
-            padding: 3mm;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4mm;
             text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 2mm;
-            margin-bottom: 2mm;
+            border-radius: 3mm 3mm 0 0;
         }
         
         .header h1 {
-            font-size: 12px;
+            font-size: 14px;
             margin-bottom: 1mm;
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        .header .invoice-title {
+        .header .company-details {
+            font-size: 7px;
+            line-height: 1.4;
+            opacity: 0.95;
+        }
+        
+        .invoice-title-bar {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 2mm 3mm;
+            margin: 3mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .invoice-title {
             font-size: 11px;
             font-weight: bold;
-            margin-bottom: 1mm;
+            color: #667eea;
         }
         
-        .section {
-            margin-bottom: 2mm;
+        .invoice-meta {
+            font-size: 8px;
+            color: #666;
+        }
+        
+        .content-section {
+            padding: 0 3mm 3mm 3mm;
         }
         
         .section-title {
             font-size: 9px;
             font-weight: bold;
-            background: #f0f0f0;
-            padding: 1mm;
-            border: 1px solid #000;
-            margin-bottom: 1mm;
+            color: #667eea;
+            padding: 2mm 0 1mm 0;
+            border-bottom: 2px solid #667eea;
+            margin-bottom: 2mm;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1mm;
-            margin-bottom: 1mm;
+            gap: 2mm;
+            margin-bottom: 3mm;
         }
         
         .info-box {
-            border: 1px solid #ccc;
-            padding: 1mm;
+            background: #f8f9fa;
+            padding: 2mm;
+            border-radius: 2mm;
+            border-left: 3px solid #667eea;
         }
         
         .info-box.full-width {
@@ -85,38 +112,47 @@
             color: #666;
             font-weight: bold;
             margin-bottom: 0.5mm;
+            text-transform: uppercase;
         }
         
         .info-value {
             font-size: 8px;
-            color: #000;
+            color: #333;
+            font-weight: 500;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 1mm 0;
+            margin: 2mm 0;
             font-size: 7px;
+        }
+        
+        table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         
         table th {
-            background: #333;
-            color: white;
-            padding: 1mm;
+            padding: 2mm 1mm;
             text-align: left;
-            font-weight: bold;
-            border: 1px solid #000;
+            font-weight: 600;
             font-size: 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         
         table td {
-            padding: 1mm;
-            border: 1px solid #ccc;
-            text-align: left;
+            padding: 1.5mm 1mm;
+            border-bottom: 1px solid #e9ecef;
         }
         
-        table tr:nth-child(even) {
-            background: #f9f9f9;
+        table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        table tbody tr:hover {
+            background: #e3f2fd;
         }
         
         .text-right {
@@ -128,35 +164,75 @@
         }
         
         .totals-section {
-            margin-top: 2mm;
-            border: 2px solid #000;
-            padding: 1.5mm;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 3mm;
+            border-radius: 2mm;
+            margin: 3mm 0;
+            border: 2px solid #667eea;
         }
         
         .total-row {
             display: flex;
             justify-content: space-between;
-            padding: 1mm 0;
-            border-bottom: 1px solid #ccc;
+            padding: 1.5mm 0;
             font-size: 8px;
+            color: #333;
         }
         
-        .total-row:last-child {
-            border-bottom: none;
-            font-size: 10px;
+        .total-row.subtotal {
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .total-row.grand-total {
+            font-size: 11px;
             font-weight: bold;
-            margin-top: 1mm;
-            padding-top: 1mm;
-            border-top: 2px solid #000;
+            color: #667eea;
+            margin-top: 2mm;
+            padding-top: 2mm;
+            border-top: 2px solid #667eea;
+        }
+        
+        .notes-section {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 2mm;
+            margin: 2mm 0;
+            border-radius: 2mm;
+        }
+        
+        .notes-title {
+            font-size: 8px;
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 1mm;
+        }
+        
+        .notes-content {
+            font-size: 7px;
+            color: #856404;
+        }
+        
+        .bank-section {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 2mm;
+            margin: 2mm 0;
+            border-radius: 2mm;
         }
         
         .footer {
-            margin-top: 3mm;
-            padding-top: 2mm;
-            border-top: 1px solid #ccc;
+            background: #f8f9fa;
+            padding: 3mm;
             text-align: center;
-            font-size: 6px;
+            font-size: 7px;
             color: #666;
+            border-top: 2px solid #667eea;
+            margin-top: 3mm;
+        }
+        
+        .footer-highlight {
+            color: #667eea;
+            font-weight: bold;
         }
         
         .print-button {
@@ -164,21 +240,26 @@
             top: 10px;
             right: 10px;
             padding: 10px 20px;
-            background: #3498db;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: bold;
             z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
         }
         
         .print-button:hover {
-            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.3);
         }
         
         @media print {
             body {
+                background: white;
                 padding: 0;
             }
             
@@ -187,31 +268,39 @@
             }
             
             .invoice-container {
-                border: none;
-                padding: 0;
+                box-shadow: none;
             }
         }
     </style>
 </head>
 <body>
-    <button class="print-button" onclick="window.print()">🖨️ Print</button>
+    <button class="print-button" onclick="window.print()">🖨️ Print Invoice</button>
     
     <div class="invoice-container">
+        <!-- Header -->
         <div class="header">
             {% if seller %}
             <h1>{{ seller['seller_name'] }}</h1>
-            <div style="font-size: 7px; margin: 1mm 0;">
+            <div class="company-details">
                 {{ seller['address'] }}<br>
-                Email: {{ seller['email'] }} | Mobile: {{ seller['mobile'] }}<br>
+                📧 {{ seller['email'] }} | 📱 {{ seller['mobile'] }}<br>
                 GST: {{ seller['gst_number'] }}
             </div>
             {% endif %}
-            <div class="invoice-title">TAX INVOICE</div>
-            <div style="font-size: 8px;">Invoice No: <strong>{{ bill['bill_id'] }}</strong> | Date: <strong>{{ bill['bill_date'] }}</strong></div>
         </div>
         
-        <div class="section">
-            <div class="section-title">BILL TO</div>
+        <!-- Invoice Title Bar -->
+        <div class="invoice-title-bar">
+            <div class="invoice-title">TAX INVOICE</div>
+            <div class="invoice-meta">
+                <strong>Invoice:</strong> {{ bill['bill_id'] }}<br>
+                <strong>Date:</strong> {{ bill['bill_date'] }}
+            </div>
+        </div>
+        
+        <div class="content-section">
+            <!-- Customer Information -->
+            <div class="section-title">Bill To</div>
             <div class="info-grid">
                 <div class="info-box">
                     <div class="info-label">Customer Name</div>
@@ -234,10 +323,9 @@
                     <div class="info-value">{{ bill['mobile'] or 'N/A' }}</div>
                 </div>
             </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">ITEMS</div>
+            
+            <!-- Items Table -->
+            <div class="section-title">Items</div>
             {% set has_igst = items|selectattr('igst', 'greaterthan', 0)|list|length > 0 %}
             {% set has_cgst_sgst = items|selectattr('cgst', 'greaterthan', 0)|list|length > 0 %}
             <table>
@@ -297,59 +385,58 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-        
-        <div class="totals-section">
-            <div class="total-row">
-                <span>Taxable Value:</span>
-                <span>₹{{ "%.2f"|format(bill['subtotal']) }}</span>
-            </div>
-            <div class="total-row">
-                <span>Total GST Amount:</span>
-                <span>₹{{ "%.2f"|format(bill['gst_amount']) }}</span>
-            </div>
-            <div class="total-row">
-                <span>TOTAL AMOUNT:</span>
-                <span>₹{{ "%.2f"|format(bill['total_amount']) }}</span>
-            </div>
-        </div>
-        
-        {% if bill['notes'] %}
-        <div class="section" style="margin-top: 2mm;">
-            <div class="section-title">NOTES</div>
-            <div style="padding: 1mm; border: 1px solid #ccc; font-size: 7px;">
-                {{ bill['notes'] }}
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if seller %}
-        <div class="section" style="margin-top: 2mm;">
-            <div class="section-title">BANK DETAILS</div>
-            <div class="info-grid">
-                <div class="info-box">
-                    <div class="info-label">Account Name</div>
-                    <div class="info-value">{{ seller['account_name'] }}</div>
+            
+            <!-- Totals -->
+            <div class="totals-section">
+                <div class="total-row subtotal">
+                    <span>Taxable Value:</span>
+                    <span><strong>₹{{ "%.2f"|format(bill['subtotal']) }}</strong></span>
                 </div>
-                <div class="info-box">
-                    <div class="info-label">Account Number</div>
-                    <div class="info-value">{{ seller['account_number'] }}</div>
+                <div class="total-row subtotal">
+                    <span>Total GST Amount:</span>
+                    <span><strong>₹{{ "%.2f"|format(bill['gst_amount']) }}</strong></span>
                 </div>
-                <div class="info-box">
-                    <div class="info-label">IFSC Code</div>
-                    <div class="info-value">{{ seller['ifsc_code'] }}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-label">Bank & Branch</div>
-                    <div class="info-value">{{ seller['account_type'] }} - {{ seller['branch'] }}</div>
+                <div class="total-row grand-total">
+                    <span>GRAND TOTAL:</span>
+                    <span>₹{{ "%.2f"|format(bill['total_amount']) }}</span>
                 </div>
             </div>
+            
+            {% if bill['notes'] %}
+            <div class="notes-section">
+                <div class="notes-title">📝 NOTES</div>
+                <div class="notes-content">{{ bill['notes'] }}</div>
+            </div>
+            {% endif %}
+            
+            {% if seller %}
+            <div class="section-title">Bank Details</div>
+            <div class="bank-section">
+                <div class="info-grid">
+                    <div class="info-box">
+                        <div class="info-label">Account Name</div>
+                        <div class="info-value">{{ seller['account_name'] }}</div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-label">Account Number</div>
+                        <div class="info-value">{{ seller['account_number'] }}</div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-label">IFSC Code</div>
+                        <div class="info-value">{{ seller['ifsc_code'] }}</div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-label">Bank & Branch</div>
+                        <div class="info-value">{{ seller['account_type'] }} - {{ seller['branch'] }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
         
         <div class="footer">
-            <p>This is a computer-generated invoice and does not require a signature.</p>
-            <p style="margin-top: 1mm;">Thank you for your business!</p>
+            <p>This is a <span class="footer-highlight">computer-generated invoice</span> and does not require a signature.</p>
+            <p style="margin-top: 1mm;">Thank you for your business! 🙏</p>
         </div>
     </div>
 </body>
