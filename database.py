@@ -108,11 +108,33 @@ def init_db():
             subtotal REAL NOT NULL DEFAULT 0.0,
             gst_percentage REAL NOT NULL DEFAULT 0.0,
             gst_amount REAL NOT NULL DEFAULT 0.0,
+            cgst REAL NOT NULL DEFAULT 0.0,
+            sgst REAL NOT NULL DEFAULT 0.0,
+            igst REAL NOT NULL DEFAULT 0.0,
             total REAL NOT NULL DEFAULT 0.0,
             FOREIGN KEY (bill_id) REFERENCES billing (id) ON DELETE CASCADE,
             FOREIGN KEY (product_id) REFERENCES inventory (id)
         )
     ''')
+    
+    # Add CGST, SGST, IGST columns to existing billing_items table if they don't exist
+    try:
+        conn.execute('SELECT cgst FROM billing_items LIMIT 1')
+    except sqlite3.OperationalError:
+        conn.execute('ALTER TABLE billing_items ADD COLUMN cgst REAL NOT NULL DEFAULT 0.0')
+        conn.commit()
+    
+    try:
+        conn.execute('SELECT sgst FROM billing_items LIMIT 1')
+    except sqlite3.OperationalError:
+        conn.execute('ALTER TABLE billing_items ADD COLUMN sgst REAL NOT NULL DEFAULT 0.0')
+        conn.commit()
+    
+    try:
+        conn.execute('SELECT igst FROM billing_items LIMIT 1')
+    except sqlite3.OperationalError:
+        conn.execute('ALTER TABLE billing_items ADD COLUMN igst REAL NOT NULL DEFAULT 0.0')
+        conn.commit()
     
     conn.commit()
     conn.close()

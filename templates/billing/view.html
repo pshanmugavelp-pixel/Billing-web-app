@@ -267,7 +267,9 @@
                     <th>Unit Price (₹)</th>
                     <th>Subtotal (₹)</th>
                     <th>GST %</th>
-                    <th>GST Amount (₹)</th>
+                    <th>CGST (₹)</th>
+                    <th>SGST (₹)</th>
+                    <th>IGST (₹)</th>
                     <th>Total (₹)</th>
                 </tr>
             </thead>
@@ -281,7 +283,9 @@
                     <td>₹{{ "%.2f"|format(item['unit_price']) }}</td>
                     <td>₹{{ "%.2f"|format(item['subtotal']) }}</td>
                     <td>{{ "%.2f"|format(item['gst_percentage']) }}%</td>
-                    <td>₹{{ "%.2f"|format(item['gst_amount']) }}</td>
+                    <td>{% if item['cgst'] > 0 %}₹{{ "%.2f"|format(item['cgst']) }}{% else %}-{% endif %}</td>
+                    <td>{% if item['sgst'] > 0 %}₹{{ "%.2f"|format(item['sgst']) }}{% else %}-{% endif %}</td>
+                    <td>{% if item['igst'] > 0 %}₹{{ "%.2f"|format(item['igst']) }}{% else %}-{% endif %}</td>
                     <td>₹{{ "%.2f"|format(item['total']) }}</td>
                 </tr>
                 {% endfor %}

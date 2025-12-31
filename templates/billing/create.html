@@ -492,6 +492,8 @@
             }
         });
         
+        let customerState = '';
+        
         function selectCustomer(customerId) {
             fetch(`/billing/api/customer/${customerId}`)
                 .then(response => response.json())
@@ -501,6 +503,7 @@
                     document.getElementById('customer_name').value = data.name || '';
                     document.getElementById('vendor_code').value = data.vendor_code || 'N/A';
                     document.getElementById('state').value = data.state || 'N/A';
+                    customerState = data.state || '';
                     customerSearch.value = `${data.customer_id} - ${data.name}`;
                     customerSearchResults.classList.remove('show');
                 });
@@ -535,6 +538,17 @@
                     const gstAmount = (subtotal * product.gst_percentage) / 100;
                     const total = subtotal + gstAmount;
                     
+                    // Calculate CGST/SGST or IGST based on customer state
+                    let cgst = 0, sgst = 0, igst = 0;
+                    if (customerState.toLowerCase() === 'puducherry') {
+                        // Intra-state: Split GST into CGST and SGST
+                        cgst = gstAmount / 2;
+                        sgst = gstAmount / 2;
+                    } else {
+                        // Inter-state: Use IGST
+                        igst = gstAmount;
+                    }
+                    
                     // Add to items array
                     const item = {
                         product_id: product.id,
@@ -544,6 +558,9 @@
                         subtotal: subtotal,
                         gst_percentage: product.gst_percentage,
                         gst_amount: gstAmount,
+                        cgst: cgst,
+                        sgst: sgst,
+                        igst: igst,
                         total: total
                     };
                     
@@ -571,7 +588,29 @@
                 return;
             }
             
-            itemsList.innerHTML = billItems.map((item, index) => `
+            itemsList.innerHTML = billItems.map((item, index) => {
+                let gstDisplay = '';
+                if (item.cgst > 0 && item.sgst > 0) {
+                    gstDisplay = `
+                        <div class="item-detail">
+                            <strong>CGST (${(item.gst_percentage / 2).toFixed(2)}%)</strong>
+                            ₹${item.cgst.toFixed(2)}
+                        </div>
+                        <div class="item-detail">
+                            <strong>SGST (${(item.gst_percentage / 2).toFixed(2)}%)</strong>
+                            ₹${item.sgst.toFixed(2)}
+                        </div>
+                    `;
+                } else {
+                    gstDisplay = `
+                        <div class="item-detail">
+                            <strong>IGST (${item.gst_percentage}%)</strong>
+                            ₹${item.igst.toFixed(2)}
+                        </div>
+                    `;
+                }
+                
+                return `
                 <div class="item-row">
                     <div class="item-header">
                         <strong>${item.product_name}</strong>
@@ -590,17 +629,15 @@
                             <strong>Subtotal</strong>
                             ₹${item.subtotal.toFixed(2)}
                         </div>
-                        <div class="item-detail">
-                            <strong>GST (${item.gst_percentage}%)</strong>
-                            ₹${item.gst_amount.toFixed(2)}
-                        </div>
+                        ${gstDisplay}
                         <div class="item-detail">
                             <strong>Total</strong>
                             ₹${item.total.toFixed(2)}
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         function updateTotals() {

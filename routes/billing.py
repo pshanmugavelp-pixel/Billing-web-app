@@ -99,11 +99,12 @@ def create():
         # Insert bill items and update inventory (use bill_id text, not lastrowid)
         for item in items:
             conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
-                           unit_price, subtotal, gst_percentage, gst_amount, total)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                           unit_price, subtotal, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                         (bill_id, item['product_id'], item['product_name'], item['quantity'],
                          item['unit_price'], item['subtotal'], item['gst_percentage'],
-                         item['gst_amount'], item['total']))
+                         item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                         item.get('igst', 0), item['total']))
             
             # Reduce inventory
             conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
