@@ -237,36 +237,12 @@
             <h2>Bill Information</h2>
             <div class="info-row">
                 <div class="info-item">
-                    <div class="info-label">Bill ID</div>
+                    <div class="info-label">Invoice Number</div>
                     <div class="info-value">{{ bill['bill_id'] }}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Bill Date</div>
                     <div class="info-value">{{ bill['bill_date'] }}</div>
-                </div>
-            </div>
-            <div class="info-row">
-                <div class="info-item">
-                    <div class="info-label">Created Date</div>
-                    <div class="info-value">{{ bill['created_at'] }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Internal ID</div>
-                    <div class="info-value">#{{ bill['id'] }}</div>
-                </div>
-            </div>
-            <div class="info-row">
-                <div class="info-item">
-                    <div class="info-label">Payment Status</div>
-                    <div class="info-value">
-                        <span class="status-badge status-{{ bill['payment_status']|lower }}">
-                            {{ bill['payment_status'] }}
-                        </span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Payment Method</div>
-                    <div class="info-value">{{ bill['payment_method'] or 'N/A' }}</div>
                 </div>
             </div>
             {% if bill['notes'] %}

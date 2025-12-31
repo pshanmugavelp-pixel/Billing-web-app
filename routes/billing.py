@@ -5,6 +5,7 @@ Handles all billing-related routes with support for multiple items per bill
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from database import get_db_connection
+from datetime import datetime
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
@@ -246,6 +247,13 @@ def view(id):
         conn.close()
         return redirect(url_for('billing.index'))
     
+    # Convert bill to dict and format date
+    bill_dict = dict(bill)
+    if bill_dict['bill_date']:
+        # Convert YYYY-MM-DD to DD-MM-YYYY
+        date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
+        bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+    
     items = conn.execute('''
         SELECT bi.*, i.product_id as inventory_product_id
         FROM billing_items bi
@@ -255,7 +263,7 @@ def view(id):
     ''', (bill['bill_id'],)).fetchall()
     
     conn.close()
-    return render_template('billing/view.html', bill=bill, items=items)
+    return render_template('billing/view.html', bill=bill_dict, items=items)
 
 @billing_bp.route('/update/<int:bill_id>', methods=['GET', 'POST'])
 def update(bill_id):
