@@ -244,9 +244,8 @@
                 <thead>
                     <tr>
                         <th style="width: 5%;">#</th>
-                        <th style="width: 10%;">Prod ID</th>
-                        <th style="width: 30%;">Product Name</th>
-                        <th style="width: 8%;" class="text-center">Qty</th>
+                        <th style="width: 35%;">Product Name</th>
+                        <th style="width: 10%;" class="text-center">Qty</th>
                         <th style="width: 12%;" class="text-right">Unit Price</th>
                         <th style="width: 12%;" class="text-right">Tax Value</th>
                         {% if has_cgst_sgst %}
@@ -264,7 +263,6 @@
                     {% set item_subtotal = item['quantity'] * item['unit_price'] %}
                     <tr>
                         <td class="text-center">{{ loop.index }}</td>
-                        <td>{{ item['inventory_product_id'] or 'N/A' }}</td>
                         <td><strong>{{ item['product_name'] }}</strong></td>
                         <td class="text-center">{{ item['quantity'] }}</td>
                         <td class="text-right">₹{{ "%.2f"|format(item['unit_price']) }}</td>
