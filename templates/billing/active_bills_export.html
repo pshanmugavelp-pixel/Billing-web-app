@@ -268,7 +268,7 @@
                         {% for bill_data in bills_with_items %}
                             {% set bill = bill_data['bill'] %}
                             {% set bill_items = bill_data['items'] %}
-                            {% if bill_items %}
+                            {% if bill_items and bill_items|length > 0 %}
                                 {% for item in bill_items %}
                                 <tr class="item-row">
                                     <td>{{ bill.bill_id }}</td>
