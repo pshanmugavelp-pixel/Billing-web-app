@@ -9,6 +9,7 @@ from routes.customers import customers_bp
 from routes.inventory import inventory_bp
 from routes.billing import billing_bp
 from routes.admin import admin_bp
+from routes.purchases import purchases_bp
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
@@ -18,6 +19,7 @@ app.register_blueprint(customers_bp)
 app.register_blueprint(inventory_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(purchases_bp)
 
 @app.route('/')
 def dashboard():

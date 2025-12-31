@@ -172,6 +172,26 @@ def init_db():
                      'Account Holder Name', '1234567890', 'IFSC0001234', 'Savings', 'Main Branch'))
         conn.commit()
     
+    # Purchase table - tracks all purchases/stock additions
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS purchases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id TEXT NOT NULL,
+            product_name TEXT NOT NULL,
+            hsn_code TEXT,
+            manufacture_date DATE,
+            expiry_month TEXT NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 0,
+            buy_price REAL NOT NULL DEFAULT 0.0,
+            unit_price REAL NOT NULL DEFAULT 0.0,
+            mrp REAL NOT NULL DEFAULT 0.0,
+            gst_percentage REAL NOT NULL DEFAULT 0.0,
+            purchase_date DATE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES inventory (product_id)
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 

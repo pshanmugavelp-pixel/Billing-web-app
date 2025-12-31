@@ -36,7 +36,7 @@
         
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 30px;
             padding: 20px;
         }
@@ -71,6 +71,10 @@
             border-top: 5px solid #e74c3c;
         }
         
+        .dashboard-card.purchases {
+            border-top: 5px solid #f39c12;
+        }
+        
         .card-icon {
             font-size: 80px;
             margin-bottom: 20px;
@@ -86,6 +90,10 @@
         
         .inventory .card-icon {
             color: #e74c3c;
+        }
+        
+        .purchases .card-icon {
+            color: #f39c12;
         }
         
         .card-title {
@@ -145,6 +153,14 @@
                 <div class="card-title">Inventory Management</div>
                 <div class="card-description">
                     Manage your product inventory, track stock levels, and update pricing information.
+                </div>
+            </a>
+            
+            <a href="{{ url_for('purchases.index') }}" class="dashboard-card purchases">
+                <div class="card-icon">🛒</div>
+                <div class="card-title">Purchase Management</div>
+                <div class="card-description">
+                    Record purchases, add new stock, and automatically update inventory quantities.
                 </div>
             </a>
         </div>

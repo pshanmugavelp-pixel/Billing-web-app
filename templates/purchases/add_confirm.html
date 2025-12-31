@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Purchase - Inventory Update</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .warning-icon {
+            font-size: 40px;
+            color: #ff9800;
+        }
+
+        .warning-text h2 {
+            color: #856404;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .warning-text p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #2ecc71;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .inventory-update {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .inventory-update h4 {
+            color: #155724;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .update-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #c3e6cb;
+        }
+
+        .update-row:last-child {
+            border-bottom: none;
+        }
+
+        .update-label {
+            color: #155724;
+            font-weight: 500;
+        }
+
+        .update-value {
+            color: #155724;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .arrow {
+            display: inline-block;
+            margin: 0 10px;
+            font-size: 18px;
+            color: #28a745;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Confirm Purchase</h1>
+            <p>Product already exists - Inventory will be updated</p>
+        </div>
+
+        <div class="content">
+            <div class="warning-box">
+                <div class="warning-icon">ℹ️</div>
+                <div class="warning-text">
+                    <h2>Product Found in Inventory</h2>
+                    <p>
+                        This product ID already exists in your inventory. Confirming this purchase will add the new quantity to the existing stock.
+                        Please review the details below before proceeding.
+                    </p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📦 Purchase Details</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Product ID</span>
+                        <span class="info-value">{{ product_id }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Product Name</span>
+                        <span class="info-value">{{ product_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">HSN Code</span>
+                        <span class="info-value">{{ hsn_code or 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Expiry Month</span>
+                        <span class="info-value">{{ expiry_month }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Purchase Quantity</span>
+                        <span class="info-value">{{ quantity }} units</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Buy Price</span>
+                        <span class="info-value">₹{{ "%.2f"|format(buy_price) }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Unit Price</span>
+                        <span class="info-value">₹{{ "%.2f"|format(unit_price) }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">MRP</span>
+                        <span class="info-value">₹{{ "%.2f"|format(mrp) }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">GST %</span>
+                        <span class="info-value">{{ gst_percentage }}%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Purchase Date</span>
+                        <span class="info-value">{{ purchase_date }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📊 Inventory Update</h3>
+                <div class="inventory-update">
+                    <h4>Current Inventory Status</h4>
+                    <div class="update-row">
+                        <span class="update-label">Current Stock:</span>
+                        <span class="update-value">{{ existing_product.quantity }} units</span>
+                    </div>
+                    <div class="update-row">
+                        <span class="update-label">Adding:</span>
+                        <span class="update-value" style="color: #28a745;">+{{ quantity }} units</span>
+                    </div>
+                    <div class="update-row">
+                        <span class="update-label">New Stock:</span>
+                        <span class="update-value">
+                            {{ existing_product.quantity }}
+                            <span class="arrow">→</span>
+                            {{ existing_product.quantity + quantity }} units
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('purchases.confirm_add') }}">
+                <!-- Hidden fields to preserve form data -->
+                <input type="hidden" name="product_id" value="{{ product_id }}">
+                <input type="hidden" name="product_name" value="{{ product_name }}">
+                <input type="hidden" name="hsn_code" value="{{ hsn_code }}">
+                <input type="hidden" name="manufacture_date" value="{{ manufacture_date }}">
+                <input type="hidden" name="expiry_month" value="{{ expiry_month }}">
+                <input type="hidden" name="quantity" value="{{ quantity }}">
+                <input type="hidden" name="buy_price" value="{{ buy_price }}">
+                <input type="hidden" name="unit_price" value="{{ unit_price }}">
+                <input type="hidden" name="mrp" value="{{ mrp }}">
+                <input type="hidden" name="gst_percentage" value="{{ gst_percentage }}">
+                <input type="hidden" name="purchase_date" value="{{ purchase_date }}">
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-confirm">
+                        ✓ Confirm & Add to Inventory
+                    </button>
+                    <a href="{{ url_for('purchases.add') }}" class="btn btn-cancel">
+                        ✗ Cancel & Go Back
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
