@@ -105,7 +105,6 @@ def init_db():
             product_name TEXT NOT NULL,
             quantity INTEGER NOT NULL DEFAULT 1,
             unit_price REAL NOT NULL DEFAULT 0.0,
-            subtotal REAL NOT NULL DEFAULT 0.0,
             gst_percentage REAL NOT NULL DEFAULT 0.0,
             gst_amount REAL NOT NULL DEFAULT 0.0,
             cgst REAL NOT NULL DEFAULT 0.0,
