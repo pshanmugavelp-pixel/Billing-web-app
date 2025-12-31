@@ -422,17 +422,6 @@
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="payment_method">Payment Method</label>
-                        <select name="payment_method" id="payment_method">
-                            <option value="">Select Method</option>
-                            <option value="Cash" {% if bill['payment_method'] == 'Cash' %}selected{% endif %}>Cash</option>
-                            <option value="Card" {% if bill['payment_method'] == 'Card' %}selected{% endif %}>Card</option>
-                            <option value="UPI" {% if bill['payment_method'] == 'UPI' %}selected{% endif %}>UPI</option>
-                            <option value="Bank Transfer" {% if bill['payment_method'] == 'Bank Transfer' %}selected{% endif %}>Bank Transfer</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
                         <label for="notes">Notes</label>
                         <textarea name="notes" id="notes" rows="3" placeholder="Additional notes...">{{ bill['notes'] or '' }}</textarea>
                     </div>

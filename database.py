@@ -72,7 +72,6 @@ def init_db():
             gst_amount REAL DEFAULT 0.0,
             total_amount REAL NOT NULL DEFAULT 0.0,
             payment_status TEXT DEFAULT 'Pending',
-            payment_method TEXT,
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (customer_id) REFERENCES customers (id)

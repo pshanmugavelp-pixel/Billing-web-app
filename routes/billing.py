@@ -34,7 +34,6 @@ def create():
         customer_id = request.form['customer_id']
         bill_date = request.form['bill_date']
         payment_status = request.form.get('payment_status', 'Pending')
-        payment_method = request.form.get('payment_method', '')
         notes = request.form.get('notes', '')
         
         # Handle bill_id generation
@@ -91,10 +90,10 @@ def create():
         
         # Insert bill header
         cursor = conn.execute('''INSERT INTO billing (bill_id, customer_id, bill_date, subtotal, gst_amount,
-                                total_amount, payment_status, payment_method, notes)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                total_amount, payment_status, notes)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
                             (bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
-                             payment_status, payment_method, notes))
+                             payment_status, notes))
         
         # Insert bill items and update inventory (use bill_id text, not lastrowid)
         for item in items:
@@ -279,7 +278,6 @@ def update(bill_id):
         customer_id = request.form['customer_id']
         bill_date = request.form['bill_date']
         payment_status = request.form.get('payment_status', 'Pending')
-        payment_method = request.form.get('payment_method', '')
         notes = request.form.get('notes', '')
         
         # Validate bill_id uniqueness (if changed)
@@ -342,10 +340,10 @@ def update(bill_id):
         
         # Update bill header
         conn.execute('''UPDATE billing SET bill_id = ?, customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
-                       total_amount = ?, payment_status = ?, payment_method = ?, notes = ?
+                       total_amount = ?, payment_status = ?, notes = ?
                        WHERE id = ?''',
                     (new_bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
-                     payment_status, payment_method, notes, bill_id))
+                     payment_status, notes, bill_id))
         
         # Delete old bill items
         conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
