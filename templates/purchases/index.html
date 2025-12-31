@@ -222,7 +222,18 @@
                         <td>{{ purchase['product_name'] }}</td>
                         <td>{{ purchase['hsn_code'] or 'N/A' }}</td>
                         <td>{{ purchase['manufacture_date'] or 'N/A' }}</td>
-                        <td>{{ purchase['expiry_month'] }}</td>
+                        <td>
+                            {% if purchase['expiry_month'] %}
+                                {% set parts = purchase['expiry_month'].split('-') %}
+                                {% if parts|length == 2 %}
+                                    {{ parts[1] }}/{{ parts[0] }}
+                                {% else %}
+                                    {{ purchase['expiry_month'] }}
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
                         <td>{{ purchase['quantity'] }}</td>
                         <td>₹{{ "%.2f"|format(purchase['buy_price']) }}</td>
                         <td>₹{{ "%.2f"|format(purchase['unit_price']) }}</td>

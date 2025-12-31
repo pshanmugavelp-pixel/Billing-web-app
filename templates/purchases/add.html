@@ -179,13 +179,26 @@
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="expiry_month">Expiry Month <span class="required">*</span></label>
-                    <input type="text" name="expiry_month" id="expiry_month" placeholder="e.g., 12/2025" required>
+                    <label for="expiry_months">Expiry (Months from Manufacture) <span class="required">*</span></label>
+                    <input type="number" id="expiry_months" name="expiry_months" min="1" required placeholder="e.g., 12">
+                    <div class="help-text" style="font-size: 12px; color: #666; margin-top: 5px;">Number of months until expiry from manufacture date</div>
                 </div>
                 
                 <div class="form-group">
+                    <label for="expiry_month">Calculated Expiry Date</label>
+                    <input type="month" id="expiry_month" name="expiry_month" readonly style="background: #f0f0f0;">
+                    <div class="help-text" style="font-size: 12px; color: #666; margin-top: 5px;">Auto-calculated based on manufacture date + months</div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
                     <label for="quantity">Quantity <span class="required">*</span></label>
                     <input type="number" name="quantity" id="quantity" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <!-- Empty space for alignment -->
                 </div>
             </div>
             
@@ -228,6 +241,33 @@
     <script>
         // Set today's date as default
         document.getElementById('purchase_date').valueAsDate = new Date();
+        
+        // Expiry date calculation
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('manufacture_month').addEventListener('change', calculateExpiryDate);
+            document.getElementById('expiry_months').addEventListener('input', calculateExpiryDate);
+        });
+
+        function calculateExpiryDate() {
+            const manufactureMonth = document.getElementById('manufacture_month').value;
+            const expiryMonths = parseInt(document.getElementById('expiry_months').value);
+
+            if (manufactureMonth && expiryMonths > 0) {
+                // Parse YYYY-MM format
+                const [year, month] = manufactureMonth.split('-').map(Number);
+                const mfgDate = new Date(year, month - 1, 1); // month is 0-indexed in JS
+                
+                // Add months to manufacture date
+                mfgDate.setMonth(mfgDate.getMonth() + expiryMonths);
+
+                // Format as YYYY-MM
+                const expYear = mfgDate.getFullYear();
+                const expMonth = String(mfgDate.getMonth() + 1).padStart(2, '0');
+                const expiryMonth = `${expYear}-${expMonth}`;
+
+                document.getElementById('expiry_month').value = expiryMonth;
+            }
+        }
         
         // Product name autocomplete
         const productNameInput = document.getElementById('product_name');

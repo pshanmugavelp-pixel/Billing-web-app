@@ -302,7 +302,18 @@
                             <td><strong>{{ item['product_name'] }}</strong></td>
                             <td>{{ item['hsn_code'] or 'N/A' }}</td>
                             <td>{{ item['manufacture_date'] or 'N/A' }}</td>
-                            <td>{{ item['expiry_month'] or 'N/A' }}</td>
+                            <td>
+                                {% if item['expiry_month'] %}
+                                    {% set parts = item['expiry_month'].split('-') %}
+                                    {% if parts|length == 2 %}
+                                        {{ parts[1] }}/{{ parts[0] }}
+                                    {% else %}
+                                        {{ item['expiry_month'] }}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>
                                 <span class="{% if item['quantity'] < 10 %}low-stock{% else %}in-stock{% endif %}">
                                     {{ item['quantity'] }}
