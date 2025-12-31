@@ -366,7 +366,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="product_select">Select Product <span class="required">*</span></label>
-                        <select id="product_select">
+                        <select id="product_select" onchange="updateUnitPrice()">
                             <option value="">-- Select Product --</option>
                             {% for product in inventory %}
                             <option value="{{ product['id'] }}">{{ product['product_id'] }} - {{ product['product_name'] }} | Mfg: {{ product['manufacture_date'] or 'N/A' }} | Stock: {{ product['quantity'] }}</option>
@@ -377,6 +377,20 @@
                     <div class="form-group">
                         <label for="item_quantity">Quantity <span class="required">*</span></label>
                         <input type="number" id="item_quantity" min="1" value="1">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="item_unit_price">Unit Price (₹) <span class="required">*</span></label>
+                        <input type="number" id="item_unit_price" step="0.01" min="0" placeholder="0.00">
+                        <div class="help-text">Edit price if needed before adding to bill</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Calculated Subtotal</label>
+                        <input type="text" id="item_subtotal_preview" disabled value="₹0.00" style="background: #f0f0f0;">
+                        <div class="help-text">Quantity × Unit Price (before GST)</div>
                     </div>
                 </div>
                 
@@ -510,9 +524,39 @@
                 });
         }
         
+        function updateUnitPrice() {
+            const productId = document.getElementById('product_select').value;
+            
+            if (!productId) {
+                document.getElementById('item_unit_price').value = '';
+                document.getElementById('item_subtotal_preview').value = '₹0.00';
+                return;
+            }
+            
+            // Get product details and populate unit price
+            fetch(`/billing/api/product/${productId}`)
+                .then(response => response.json())
+                .then(product => {
+                    document.getElementById('item_unit_price').value = product.unit_price.toFixed(2);
+                    updateSubtotalPreview();
+                });
+        }
+        
+        function updateSubtotalPreview() {
+            const quantity = parseInt(document.getElementById('item_quantity').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('item_unit_price').value) || 0;
+            const subtotal = quantity * unitPrice;
+            document.getElementById('item_subtotal_preview').value = '₹' + subtotal.toFixed(2);
+        }
+        
+        // Add event listener for quantity changes
+        document.getElementById('item_quantity').addEventListener('input', updateSubtotalPreview);
+        document.getElementById('item_unit_price').addEventListener('input', updateSubtotalPreview);
+        
         function addItem() {
             const productId = document.getElementById('product_select').value;
             const quantity = parseInt(document.getElementById('item_quantity').value);
+            const unitPrice = parseFloat(document.getElementById('item_unit_price').value);
             
             if (!productId) {
                 alert('Please select a product');
@@ -521,6 +565,11 @@
             
             if (!quantity || quantity < 1) {
                 alert('Please enter a valid quantity');
+                return;
+            }
+            
+            if (!unitPrice || unitPrice < 0) {
+                alert('Please enter a valid unit price');
                 return;
             }
             
@@ -533,8 +582,7 @@
                         return;
                     }
                     
-                    // Calculate amounts
-                    const unitPrice = product.unit_price;
+                    // Calculate amounts using the edited unit price
                     const subtotal = quantity * unitPrice;
                     const gstAmount = (subtotal * product.gst_percentage) / 100;
                     const total = subtotal + gstAmount;
@@ -572,6 +620,8 @@
                     // Reset form
                     document.getElementById('product_select').value = '';
                     document.getElementById('item_quantity').value = '1';
+                    document.getElementById('item_unit_price').value = '';
+                    document.getElementById('item_subtotal_preview').value = '₹0.00';
                 });
         }
         
