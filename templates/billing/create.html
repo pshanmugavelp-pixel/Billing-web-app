@@ -459,10 +459,36 @@
     <script>
         const customers = {{ customers|tojson }};
         const inventory = {{ inventory|tojson }};
+        const formData = {{ form_data|tojson }};
         let billItems = [];
         
-        // Set today's date as default
-        document.getElementById('bill_date').valueAsDate = new Date();
+        // Restore form data if available (after error)
+        if (formData) {
+            // Restore basic form fields
+            if (formData.bill_id) document.getElementById('bill_id').value = formData.bill_id;
+            if (formData.bill_date) document.getElementById('bill_date').value = formData.bill_date;
+            if (formData.payment_status) document.getElementById('payment_status').value = formData.payment_status;
+            if (formData.notes) document.getElementById('notes').value = formData.notes;
+            
+            // Restore customer
+            if (formData.customer_id) {
+                selectCustomer(parseInt(formData.customer_id));
+            }
+            
+            // Restore items
+            if (formData.items_data) {
+                try {
+                    billItems = JSON.parse(formData.items_data);
+                    renderItems();
+                    updateTotals();
+                } catch (e) {
+                    console.error('Error parsing items data:', e);
+                }
+            }
+        } else {
+            // Set today's date as default for new bills
+            document.getElementById('bill_date').valueAsDate = new Date();
+        }
         
         // Customer Search
         const customerSearch = document.getElementById('customerSearch');

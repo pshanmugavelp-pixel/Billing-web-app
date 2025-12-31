@@ -28,11 +28,18 @@ def create():
     """Create a new bill with multiple items"""
     conn = get_db_connection()
     
+    # Get customers and inventory for form
+    customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
+    customers = [dict(row) for row in customers_rows]
+    
+    inventory_rows = conn.execute('SELECT * FROM inventory WHERE quantity > 0 ORDER BY product_name').fetchall()
+    inventory = [dict(row) for row in inventory_rows]
+    
     if request.method == 'POST':
         bill_id = request.form.get('bill_id', '').strip()
         bill_id_mode = request.form.get('bill_id_mode', 'auto')
-        customer_id = request.form['customer_id']
-        bill_date = request.form['bill_date']
+        customer_id = request.form.get('customer_id', '')
+        bill_date = request.form.get('bill_date', '')
         payment_status = request.form.get('payment_status', 'Pending')
         notes = request.form.get('notes', '')
         
@@ -55,8 +62,17 @@ def create():
             existing = conn.execute('SELECT id FROM billing WHERE bill_id = ?', (bill_id,)).fetchone()
             if existing:
                 flash(f'Bill ID "{bill_id}" already exists! Please use a different ID.', 'error')
+                # Return to form with existing data
+                form_data = {
+                    'bill_id': bill_id,
+                    'customer_id': customer_id,
+                    'bill_date': bill_date,
+                    'payment_status': payment_status,
+                    'notes': notes,
+                    'items_data': request.form.get('items_data', '[]')
+                }
                 conn.close()
-                return redirect(url_for('billing.create'))
+                return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
         
         # Get items data (sent as JSON)
         import json
@@ -65,13 +81,31 @@ def create():
         
         if not customer_id or not bill_date:
             flash('Customer and Bill Date are required!', 'error')
+            # Return to form with existing data
+            form_data = {
+                'bill_id': bill_id,
+                'customer_id': customer_id,
+                'bill_date': bill_date,
+                'payment_status': payment_status,
+                'notes': notes,
+                'items_data': items_json
+            }
             conn.close()
-            return redirect(url_for('billing.create'))
+            return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
         
         if not items or len(items) == 0:
             flash('Please add at least one item to the bill!', 'error')
+            # Return to form with existing data
+            form_data = {
+                'bill_id': bill_id,
+                'customer_id': customer_id,
+                'bill_date': bill_date,
+                'payment_status': payment_status,
+                'notes': notes,
+                'items_data': items_json
+            }
             conn.close()
-            return redirect(url_for('billing.create'))
+            return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
         
         # Group items by product_id and sum quantities for duplicate products
         product_quantities = {}
@@ -92,12 +126,30 @@ def create():
             if product:
                 if product['quantity'] < data['total_quantity']:
                     flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Requested: {data["total_quantity"]}, Available: {product["quantity"]}', 'error')
+                    # Return to form with existing data
+                    form_data = {
+                        'bill_id': bill_id,
+                        'customer_id': customer_id,
+                        'bill_date': bill_date,
+                        'payment_status': payment_status,
+                        'notes': notes,
+                        'items_data': items_json
+                    }
                     conn.close()
-                    return redirect(url_for('billing.create'))
+                    return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
             else:
                 flash(f'Product {data["product_name"]} not found in inventory!', 'error')
+                # Return to form with existing data
+                form_data = {
+                    'bill_id': bill_id,
+                    'customer_id': customer_id,
+                    'bill_date': bill_date,
+                    'payment_status': payment_status,
+                    'notes': notes,
+                    'items_data': items_json
+                }
                 conn.close()
-                return redirect(url_for('billing.create'))
+                return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
         
         # Calculate totals
         subtotal = sum(float(item['subtotal']) for item in items)
@@ -134,15 +186,9 @@ def create():
         flash(f'Bill {bill_id} created successfully with {len(items)} item(s)! Inventory updated.', 'success')
         return redirect(url_for('billing.index'))
     
-    # Convert Row objects to dictionaries for JSON serialization
-    customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
-    customers = [dict(row) for row in customers_rows]
-    
-    inventory_rows = conn.execute('SELECT * FROM inventory WHERE quantity > 0 ORDER BY product_name').fetchall()
-    inventory = [dict(row) for row in inventory_rows]
-    
+    # GET request - show empty form
     conn.close()
-    return render_template('billing/create.html', customers=customers, inventory=inventory)
+    return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=None)
 
 @billing_bp.route('/api/customer/<int:customer_id>')
 def get_customer(customer_id):
