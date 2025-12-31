@@ -263,8 +263,11 @@ def view(id):
         ORDER BY bi.id
     ''', (bill['bill_id'],)).fetchall()
     
+    # Get seller information
+    seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+    
     conn.close()
-    return render_template('billing/view.html', bill=bill_dict, items=items)
+    return render_template('billing/view.html', bill=bill_dict, items=items, seller=seller)
 
 @billing_bp.route('/update/<int:bill_id>', methods=['GET', 'POST'])
 def update(bill_id):

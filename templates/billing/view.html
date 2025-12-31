@@ -201,6 +201,59 @@
             </div>
         </div>
         
+        <!-- Seller Information -->
+        {% if seller %}
+        <div class="info-section">
+            <h2>Seller Information</h2>
+            <div class="info-row">
+                <div class="info-item">
+                    <div class="info-label">Business Name</div>
+                    <div class="info-value">{{ seller['seller_name'] }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">GST Number</div>
+                    <div class="info-value">{{ seller['gst_number'] }}</div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ seller['email'] }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Mobile</div>
+                    <div class="info-value">{{ seller['mobile'] }}</div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <div class="info-label">Address</div>
+                    <div class="info-value">{{ seller['address'] }}</div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-item">
+                    <div class="info-label">Bank Account</div>
+                    <div class="info-value">{{ seller['account_name'] }} - {{ seller['account_number'] }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">IFSC Code</div>
+                    <div class="info-value">{{ seller['ifsc_code'] }}</div>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-item">
+                    <div class="info-label">Account Type</div>
+                    <div class="info-value">{{ seller['account_type'] }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Branch</div>
+                    <div class="info-value">{{ seller['branch'] }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Customer Information -->
         <div class="info-section">
             <h2>Customer Information</h2>

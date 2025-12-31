@@ -136,6 +136,35 @@ def init_db():
         conn.execute('ALTER TABLE billing_items ADD COLUMN igst REAL NOT NULL DEFAULT 0.0')
         conn.commit()
     
+    # Seller information table
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS seller_info (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            seller_name TEXT NOT NULL,
+            address TEXT,
+            email TEXT,
+            mobile TEXT,
+            gst_number TEXT,
+            account_name TEXT,
+            account_number TEXT,
+            ifsc_code TEXT,
+            account_type TEXT,
+            branch TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Insert default seller info if table is empty
+    existing_seller = conn.execute('SELECT COUNT(*) as count FROM seller_info').fetchone()
+    if existing_seller['count'] == 0:
+        conn.execute('''INSERT INTO seller_info (seller_name, address, email, mobile, gst_number,
+                        account_name, account_number, ifsc_code, account_type, branch)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    ('Your Company Name', 'Your Address', 'email@example.com', '1234567890', 'GST123456',
+                     'Account Holder Name', '1234567890', 'IFSC0001234', 'Savings', 'Main Branch'))
+        conn.commit()
+    
     conn.commit()
     conn.close()
 

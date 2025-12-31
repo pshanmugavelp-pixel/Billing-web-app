@@ -15,7 +15,7 @@ def index():
     
     # Get table information
     tables_info = {}
-    tables = ['customers', 'inventory', 'billing', 'billing_items']
+    tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
     
     for table in tables:
         try:
@@ -27,10 +27,59 @@ def index():
     conn.close()
     return render_template('admin/index.html', tables_info=tables_info)
 
+@admin_bp.route('/seller-info')
+def seller_info():
+    """View and manage seller information"""
+    conn = get_db_connection()
+    seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+    conn.close()
+    return render_template('admin/seller_info.html', seller=seller)
+
+@admin_bp.route('/seller-info/update', methods=['POST'])
+def update_seller_info():
+    """Update seller information"""
+    seller_name = request.form['seller_name']
+    address = request.form['address']
+    email = request.form['email']
+    mobile = request.form['mobile']
+    gst_number = request.form['gst_number']
+    account_name = request.form['account_name']
+    account_number = request.form['account_number']
+    ifsc_code = request.form['ifsc_code']
+    account_type = request.form['account_type']
+    branch = request.form['branch']
+    
+    conn = get_db_connection()
+    
+    # Check if seller info exists
+    existing = conn.execute('SELECT id FROM seller_info LIMIT 1').fetchone()
+    
+    if existing:
+        # Update existing record
+        conn.execute('''UPDATE seller_info SET seller_name = ?, address = ?, email = ?, mobile = ?,
+                        gst_number = ?, account_name = ?, account_number = ?, ifsc_code = ?,
+                        account_type = ?, branch = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?''',
+                    (seller_name, address, email, mobile, gst_number, account_name, account_number,
+                     ifsc_code, account_type, branch, existing['id']))
+    else:
+        # Insert new record
+        conn.execute('''INSERT INTO seller_info (seller_name, address, email, mobile, gst_number,
+                        account_name, account_number, ifsc_code, account_type, branch)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (seller_name, address, email, mobile, gst_number, account_name, account_number,
+                     ifsc_code, account_type, branch))
+    
+    conn.commit()
+    conn.close()
+    
+    flash('Seller information updated successfully!', 'success')
+    return redirect(url_for('admin.seller_info'))
+
 @admin_bp.route('/view-table/<table_name>')
 def view_table(table_name):
     """View table data and schema"""
-    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items']
+    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
     
     if table_name not in allowed_tables:
         flash('Invalid table name!', 'error')
@@ -66,7 +115,7 @@ def view_table(table_name):
 @admin_bp.route('/delete-rows/<table_name>', methods=['POST'])
 def delete_rows(table_name):
     """Delete selected rows from a table"""
-    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items']
+    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
     
     if table_name not in allowed_tables:
         flash('Invalid table name!', 'error')
@@ -110,7 +159,7 @@ def delete_rows(table_name):
 @admin_bp.route('/reset-table/<table_name>', methods=['POST'])
 def reset_table(table_name):
     """Reset a specific table"""
-    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items']
+    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
     
     if table_name not in allowed_tables:
         flash('Invalid table name!', 'error')
