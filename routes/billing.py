@@ -752,12 +752,13 @@ def update(bill_id):
 
 @billing_bp.route('/active-bills-export')
 def active_bills_export():
-    """Display all active bills with detailed information for Excel export"""
+    """Display all active bills with detailed item information for Excel export"""
     conn = get_db_connection()
     
-    # Get all active bills (not cancelled) with customer details
+    # Get all active bills (not cancelled) with customer details and items
     bills = conn.execute('''
         SELECT
+            b.id,
             b.bill_id,
             c.name as customer_name,
             c.gst_number as customer_gst,
@@ -780,7 +781,32 @@ def active_bills_export():
         ORDER BY b.created_at DESC
     ''').fetchall()
     
+    # Get items for each bill
+    bills_with_items = []
+    for bill in bills:
+        items = conn.execute('''
+            SELECT
+                bi.product_name,
+                i.hsn_code,
+                bi.quantity,
+                bi.unit_price,
+                bi.gst_percentage,
+                bi.igst,
+                bi.sgst,
+                bi.cgst,
+                bi.total
+            FROM billing_items bi
+            LEFT JOIN inventory i ON bi.product_id = i.id
+            WHERE bi.bill_id = ?
+            ORDER BY bi.id
+        ''', (bill['id'],)).fetchall()
+        
+        bills_with_items.append({
+            'bill': dict(bill),
+            'items': [dict(item) for item in items]
+        })
+    
     conn.close()
-    return render_template('billing/active_bills_export.html', bills=bills)
+    return render_template('billing/active_bills_export.html', bills_with_items=bills_with_items)
 
 # Made with Bob

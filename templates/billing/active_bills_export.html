@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Active Bills Export</title>
+    <title>Active Bills Export with Items</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
@@ -20,7 +20,7 @@
         }
         
         .container {
-            max-width: 1600px;
+            max-width: 1800px;
             margin: 0 auto;
             background: white;
             border-radius: 10px;
@@ -120,14 +120,14 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1400px;
+            min-width: 2000px;
         }
         
         th, td {
-            padding: 12px;
+            padding: 10px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
-            font-size: 14px;
+            border: 1px solid #ddd;
+            font-size: 13px;
         }
         
         th {
@@ -195,14 +195,18 @@
             margin: 5px 0;
             color: #1976D2;
         }
+        
+        .item-row {
+            background: #f9f9f9;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div>
-                <h1>📊 Active Bills Export</h1>
-                <p class="bill-count">Total Active Bills: {{ bills|length }}</p>
+                <h1>📊 Active Bills Export with Item Details</h1>
+                <p class="bill-count">Total Active Bills: {{ bills_with_items|length }}</p>
             </div>
             <div class="button-group">
                 <button onclick="downloadExcel()" class="btn btn-success no-print">📥 Download Excel</button>
@@ -214,7 +218,8 @@
         
         <div class="info-box no-print">
             <p><strong>ℹ️ About this page:</strong></p>
-            <p>This page displays all active bills (excluding cancelled bills) with complete customer and billing information.</p>
+            <p>This page displays all active bills with complete item-level details including item name, HSN code, quantity, unit price, and tax breakdowns (IGST, SGST, CGST).</p>
+            <p>Each bill's items are shown as separate rows for detailed analysis.</p>
             <p>Click "Download Excel" to export all data to a spreadsheet file.</p>
         </div>
         
@@ -228,53 +233,73 @@
             {% endif %}
         {% endwith %}
         
-        {% if bills %}
+        {% if bills_with_items %}
             <div class="table-wrapper">
                 <table id="billsTable">
                     <thead>
                         <tr>
                             <th>Bill ID</th>
-                            <th>Customer Name</th>
-                            <th>Customer GST Number</th>
                             <th>Bill Date</th>
-                            <th>Subtotal (₹)</th>
-                            <th>GST Amount (₹)</th>
-                            <th>Total Amount (₹)</th>
+                            <th>Customer Name</th>
+                            <th>Customer GST</th>
+                            <th>Item Name</th>
+                            <th>HSN Code</th>
+                            <th>Quantity</th>
+                            <th>Unit Price (₹)</th>
+                            <th>GST %</th>
+                            <th>IGST (₹)</th>
+                            <th>SGST (₹)</th>
+                            <th>CGST (₹)</th>
+                            <th>Item Total (₹)</th>
+                            <th>Bill Subtotal (₹)</th>
+                            <th>Bill GST (₹)</th>
+                            <th>Bill Total (₹)</th>
                             <th>Payment Status</th>
-                            <th>Notes</th>
-                            <th>Created Date</th>
                             <th>Customer ID</th>
                             <th>Vendor Code</th>
                             <th>Email</th>
                             <th>Mobile</th>
                             <th>Address</th>
                             <th>State</th>
+                            <th>Notes</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for bill in bills %}
-                        <tr>
-                            <td>{{ bill['bill_id'] }}</td>
-                            <td>{{ bill['customer_name'] }}</td>
-                            <td>{{ bill['customer_gst'] or 'N/A' }}</td>
-                            <td>{{ bill['bill_date'] }}</td>
-                            <td>₹{{ "%.2f"|format(bill['subtotal']) }}</td>
-                            <td>₹{{ "%.2f"|format(bill['gst_amount']) }}</td>
-                            <td>₹{{ "%.2f"|format(bill['total_amount']) }}</td>
-                            <td>
-                                <span class="status-badge status-{{ bill['payment_status']|lower }}">
-                                    {{ bill['payment_status'] }}
-                                </span>
-                            </td>
-                            <td>{{ bill['notes'] or '' }}</td>
-                            <td>{{ bill['created_at'] }}</td>
-                            <td>{{ bill['customer_id'] }}</td>
-                            <td>{{ bill['vendor_code'] or 'N/A' }}</td>
-                            <td>{{ bill['email'] or 'N/A' }}</td>
-                            <td>{{ bill['mobile'] or 'N/A' }}</td>
-                            <td>{{ bill['address'] or 'N/A' }}</td>
-                            <td>{{ bill['state'] or 'N/A' }}</td>
-                        </tr>
+                        {% for bill_data in bills_with_items %}
+                            {% set bill = bill_data.bill %}
+                            {% set items = bill_data.items %}
+                            {% for item in items %}
+                            <tr class="item-row">
+                                <td>{{ bill.bill_id }}</td>
+                                <td>{{ bill.bill_date }}</td>
+                                <td>{{ bill.customer_name }}</td>
+                                <td>{{ bill.customer_gst or 'N/A' }}</td>
+                                <td>{{ item.product_name }}</td>
+                                <td>{{ item.hsn_code or 'N/A' }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ "%.2f"|format(item.unit_price) }}</td>
+                                <td>{{ "%.2f"|format(item.gst_percentage) }}%</td>
+                                <td>{{ "%.2f"|format(item.igst) }}</td>
+                                <td>{{ "%.2f"|format(item.sgst) }}</td>
+                                <td>{{ "%.2f"|format(item.cgst) }}</td>
+                                <td>{{ "%.2f"|format(item.total) }}</td>
+                                <td>{{ "%.2f"|format(bill.subtotal) }}</td>
+                                <td>{{ "%.2f"|format(bill.gst_amount) }}</td>
+                                <td>{{ "%.2f"|format(bill.total_amount) }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ bill.payment_status|lower }}">
+                                        {{ bill.payment_status }}
+                                    </span>
+                                </td>
+                                <td>{{ bill.customer_id }}</td>
+                                <td>{{ bill.vendor_code or 'N/A' }}</td>
+                                <td>{{ bill.email or 'N/A' }}</td>
+                                <td>{{ bill.mobile or 'N/A' }}</td>
+                                <td>{{ bill.address or 'N/A' }}</td>
+                                <td>{{ bill.state or 'N/A' }}</td>
+                                <td>{{ bill.notes or '' }}</td>
+                            </tr>
+                            {% endfor %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -305,8 +330,8 @@
                 tr.querySelectorAll('td').forEach(td => {
                     // Remove currency symbols and clean text
                     let text = td.textContent.trim();
-                    // Remove ₹ symbol for numeric columns
-                    text = text.replace('₹', '');
+                    // Remove ₹ symbol and % symbol for numeric columns
+                    text = text.replace('₹', '').replace('%', '');
                     row.push(text);
                 });
                 rows.push(row);
@@ -319,28 +344,36 @@
             // Set column widths
             ws['!cols'] = [
                 {wch: 12},  // Bill ID
-                {wch: 25},  // Customer Name
-                {wch: 20},  // Customer GST Number
                 {wch: 12},  // Bill Date
-                {wch: 12},  // Subtotal
-                {wch: 12},  // GST Amount
-                {wch: 15},  // Total Amount
+                {wch: 25},  // Customer Name
+                {wch: 20},  // Customer GST
+                {wch: 30},  // Item Name
+                {wch: 12},  // HSN Code
+                {wch: 10},  // Quantity
+                {wch: 12},  // Unit Price
+                {wch: 8},   // GST %
+                {wch: 12},  // IGST
+                {wch: 12},  // SGST
+                {wch: 12},  // CGST
+                {wch: 12},  // Item Total
+                {wch: 15},  // Bill Subtotal
+                {wch: 12},  // Bill GST
+                {wch: 15},  // Bill Total
                 {wch: 15},  // Payment Status
-                {wch: 30},  // Notes
-                {wch: 20},  // Created Date
                 {wch: 15},  // Customer ID
                 {wch: 15},  // Vendor Code
                 {wch: 25},  // Email
                 {wch: 15},  // Mobile
                 {wch: 35},  // Address
-                {wch: 15}   // State
+                {wch: 15},  // State
+                {wch: 30}   // Notes
             ];
             
-            XLSX.utils.book_append_sheet(wb, ws, 'Active Bills');
+            XLSX.utils.book_append_sheet(wb, ws, 'Active Bills with Items');
             
             // Generate filename with current date
             const date = new Date().toISOString().split('T')[0];
-            const filename = `active_bills_export_${date}.xlsx`;
+            const filename = `active_bills_items_export_${date}.xlsx`;
             
             // Download file
             XLSX.writeFile(wb, filename);
