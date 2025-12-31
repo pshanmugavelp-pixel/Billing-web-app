@@ -15,7 +15,7 @@ def index():
     
     # Get table information
     tables_info = {}
-    tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
+    tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info', 'purchases']
     
     for table in tables:
         try:
@@ -79,7 +79,7 @@ def update_seller_info():
 @admin_bp.route('/view-table/<table_name>')
 def view_table(table_name):
     """View table data and schema"""
-    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
+    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info', 'purchases']
     
     if table_name not in allowed_tables:
         flash('Invalid table name!', 'error')
@@ -115,7 +115,7 @@ def view_table(table_name):
 @admin_bp.route('/delete-rows/<table_name>', methods=['POST'])
 def delete_rows(table_name):
     """Delete selected rows from a table"""
-    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
+    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info', 'purchases']
     
     if table_name not in allowed_tables:
         flash('Invalid table name!', 'error')
@@ -159,7 +159,7 @@ def delete_rows(table_name):
 @admin_bp.route('/reset-table/<table_name>', methods=['POST'])
 def reset_table(table_name):
     """Reset a specific table"""
-    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info']
+    allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info', 'purchases']
     
     if table_name not in allowed_tables:
         flash('Invalid table name!', 'error')
@@ -257,6 +257,25 @@ def reset_table(table_name):
                     branch TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        elif table_name == 'purchases':
+            conn.execute('''
+                CREATE TABLE purchases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id TEXT NOT NULL,
+                    product_name TEXT NOT NULL,
+                    hsn_code TEXT,
+                    manufacture_date DATE,
+                    expiry_month TEXT NOT NULL,
+                    quantity INTEGER NOT NULL DEFAULT 0,
+                    buy_price REAL NOT NULL DEFAULT 0.0,
+                    unit_price REAL NOT NULL DEFAULT 0.0,
+                    mrp REAL NOT NULL DEFAULT 0.0,
+                    gst_percentage REAL NOT NULL DEFAULT 0.0,
+                    purchase_date DATE NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (product_id) REFERENCES inventory (product_id)
                 )
             ''')
         
