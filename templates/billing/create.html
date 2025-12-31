@@ -482,7 +482,8 @@
             if (filtered.length > 0) {
                 customerSearchResults.innerHTML = filtered.map(c =>
                     `<div class="search-result-item" onclick="selectCustomer(${c.id})">
-                        <strong>${c.customer_id}</strong> - ${c.name}
+                        <strong>${c.customer_id}</strong> - ${c.name}<br>
+                        <small style="color: #666;">${c.address || 'No address'}</small>
                     </div>`
                 ).join('');
                 customerSearchResults.classList.add('show');
