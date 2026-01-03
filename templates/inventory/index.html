@@ -301,7 +301,18 @@
                             <td><strong>{{ item['product_id'] }}</strong></td>
                             <td><strong>{{ item['product_name'] }}</strong></td>
                             <td>{{ item['hsn_code'] or 'N/A' }}</td>
-                            <td>{{ item['manufacture_date'] or 'N/A' }}</td>
+                            <td>
+                                {% if item['manufacture_date'] %}
+                                    {% set date_parts = item['manufacture_date'].split('-') %}
+                                    {% if date_parts|length == 3 %}
+                                        {{ date_parts[1] }}/{{ date_parts[0] }}
+                                    {% else %}
+                                        {{ item['manufacture_date'] }}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if item['expiry_month'] %}
                                     {% set parts = item['expiry_month'].split('-') %}
@@ -319,10 +330,10 @@
                                     {{ item['quantity'] }}
                                 </span>
                             </td>
-                            <td>₹{{ "%.2f"|format(item['buy_price']) }}</td>
-                            <td>₹{{ "%.2f"|format(item['unit_price']) }}</td>
-                            <td>₹{{ "%.2f"|format(item['mrp']) }}</td>
-                            <td>{{ "%.2f"|format(item['gst_percentage']) }}%</td>
+                            <td>₹{{ "%.4f"|format(item['buy_price']) }}</td>
+                            <td>₹{{ "%.4f"|format(item['unit_price']) }}</td>
+                            <td>₹{{ "%.4f"|format(item['mrp']) }}</td>
+                            <td>{{ "%.4f"|format(item['gst_percentage']) }}%</td>
                             <td>{{ item['updated_at'] }}</td>
                             <td class="no-print">
                                 <a href="{{ url_for('inventory.update', id=item['id']) }}"

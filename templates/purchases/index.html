@@ -235,9 +235,9 @@
                             {% endif %}
                         </td>
                         <td>{{ purchase['quantity'] }}</td>
-                        <td>₹{{ "%.2f"|format(purchase['buy_price']) }}</td>
-                        <td>₹{{ "%.2f"|format(purchase['unit_price']) }}</td>
-                        <td>₹{{ "%.2f"|format(purchase['mrp']) }}</td>
+                        <td>₹{{ "%.4f"|format(purchase['buy_price']) }}</td>
+                        <td>₹{{ "%.4f"|format(purchase['unit_price']) }}</td>
+                        <td>₹{{ "%.4f"|format(purchase['mrp']) }}</td>
                         <td>{{ purchase['gst_percentage'] }}%</td>
                         <td>{{ purchase['purchase_date'] }}</td>
                         <td class="no-print">

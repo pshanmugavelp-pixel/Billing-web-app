@@ -20,7 +20,7 @@ def index():
         # Show only cancelled bills
         bills = conn.execute('''
             SELECT b.*, c.name as customer_name,
-                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.id) as item_count
+                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
             FROM billing b
             JOIN customers c ON b.customer_id = c.id
             WHERE b.payment_status = 'Cancelled'
@@ -30,7 +30,7 @@ def index():
         # Show all bills except cancelled
         bills = conn.execute('''
             SELECT b.*, c.name as customer_name,
-                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.id) as item_count
+                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
             FROM billing b
             JOIN customers c ON b.customer_id = c.id
             WHERE b.payment_status != 'Cancelled'

@@ -312,22 +312,22 @@
                     <td class="text-center">{{ loop.index }}</td>
                     <td>{{ item['product_name'] }}</td>
                     <td class="text-center">{{ item['quantity'] }}</td>
-                    <td class="text-right">₹{{ "%.2f"|format(item['unit_price']) }}</td>
-                    <td class="text-right">₹{{ "%.2f"|format(item_subtotal) }}</td>
+                    <td class="text-right">₹{{ "%.4f"|format(item['unit_price']) }}</td>
+                    <td class="text-right">₹{{ "%.4f"|format(item_subtotal) }}</td>
                     {% if has_cgst_sgst %}
                     <td class="text-right">
-                        {% if item['cgst'] > 0 %}₹{{ "%.2f"|format(item['cgst']) }}{% else %}-{% endif %}
+                        {% if item['cgst'] > 0 %}₹{{ "%.4f"|format(item['cgst']) }}{% else %}-{% endif %}
                     </td>
                     <td class="text-right">
-                        {% if item['sgst'] > 0 %}₹{{ "%.2f"|format(item['sgst']) }}{% else %}-{% endif %}
+                        {% if item['sgst'] > 0 %}₹{{ "%.4f"|format(item['sgst']) }}{% else %}-{% endif %}
                     </td>
                     {% endif %}
                     {% if has_igst %}
                     <td class="text-right">
-                        {% if item['igst'] > 0 %}₹{{ "%.2f"|format(item['igst']) }}{% else %}-{% endif %}
+                        {% if item['igst'] > 0 %}₹{{ "%.4f"|format(item['igst']) }}{% else %}-{% endif %}
                     </td>
                     {% endif %}
-                    <td class="text-right"><strong>₹{{ "%.2f"|format(item['total']) }}</strong></td>
+                    <td class="text-right"><strong>₹{{ "%.4f"|format(item['total']) }}</strong></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -338,15 +338,15 @@
             <table>
                 <tr>
                     <td>Taxable Value:</td>
-                    <td class="text-right">₹{{ "%.2f"|format(bill['subtotal']) }}</td>
+                    <td class="text-right">₹{{ "%.4f"|format(bill['subtotal']) }}</td>
                 </tr>
                 <tr>
                     <td>GST Amount:</td>
-                    <td class="text-right">₹{{ "%.2f"|format(bill['gst_amount']) }}</td>
+                    <td class="text-right">₹{{ "%.4f"|format(bill['gst_amount']) }}</td>
                 </tr>
                 <tr class="grand-total">
                     <td><strong>GRAND TOTAL:</strong></td>
-                    <td class="text-right"><strong>₹{{ "%.2f"|format(bill['total_amount']) }}</strong></td>
+                    <td class="text-right"><strong>₹{{ "%.4f"|format(bill['total_amount']) }}</strong></td>
                 </tr>
             </table>
         </div>

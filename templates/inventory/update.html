@@ -262,17 +262,17 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="buy_price">Buy Price (₹) <span class="required">*</span></label>
-                    <input type="number" id="buy_price" name="buy_price" step="0.01" min="0" required
+                    <input type="number" id="buy_price" name="buy_price" step="0.0001" min="0" required
                            value="{{ item['buy_price'] }}"
-                           placeholder="0.00">
+                           placeholder="0.0000">
                     <div class="help-text">Purchase price per unit</div>
                 </div>
                 
                 <div class="form-group">
                     <label for="unit_price">Unit Price (₹) <span class="required">*</span></label>
-                    <input type="number" id="unit_price" name="unit_price" step="0.01" min="0" required
+                    <input type="number" id="unit_price" name="unit_price" step="0.0001" min="0" required
                            value="{{ item['unit_price'] }}"
-                           placeholder="0.00">
+                           placeholder="0.0000">
                     <div class="help-text">Selling price per unit</div>
                 </div>
             </div>
@@ -280,9 +280,9 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="mrp">MRP (₹) <span class="required">*</span></label>
-                    <input type="number" id="mrp" name="mrp" step="0.01" min="0" required
+                    <input type="number" id="mrp" name="mrp" step="0.0001" min="0" required
                            value="{{ item['mrp'] }}"
-                           placeholder="0.00">
+                           placeholder="0.0000">
                     <div class="help-text">Maximum Retail Price</div>
                 </div>
                 
