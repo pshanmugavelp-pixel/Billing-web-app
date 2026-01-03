@@ -78,12 +78,20 @@ def update_seller_info():
 
 @admin_bp.route('/view-table/<table_name>')
 def view_table(table_name):
-    """View table data and schema"""
+    """View table data and schema with pagination"""
     allowed_tables = ['customers', 'inventory', 'billing', 'billing_items', 'seller_info', 'purchases']
     
     if table_name not in allowed_tables:
         flash('Invalid table name!', 'error')
         return redirect(url_for('admin.index'))
+    
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # Validate per_page
+    if per_page not in [10, 20, 50, 100]:
+        per_page = 20
     
     conn = get_db_connection()
     
@@ -91,8 +99,22 @@ def view_table(table_name):
         # Get table schema
         schema = conn.execute(f'PRAGMA table_info({table_name})').fetchall()
         
-        # Get table data
-        data = conn.execute(f'SELECT * FROM {table_name} LIMIT 100').fetchall()
+        # Get total count
+        total_count = conn.execute(f'SELECT COUNT(*) as count FROM {table_name}').fetchone()['count']
+        
+        # Calculate pagination
+        total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
+        
+        # Validate page number
+        if page < 1:
+            page = 1
+        elif page > total_pages:
+            page = total_pages
+        
+        offset = (page - 1) * per_page
+        
+        # Get paginated data
+        data = conn.execute(f'SELECT * FROM {table_name} LIMIT ? OFFSET ?', (per_page, offset)).fetchall()
         
         # Get primary key column name
         pk_column = None
@@ -101,12 +123,22 @@ def view_table(table_name):
                 pk_column = col['name']
                 break
         
+        # Calculate pagination info
+        has_prev = page > 1
+        has_next = page < total_pages
+        
         conn.close()
         return render_template('admin/view_table.html',
                              table_name=table_name,
                              schema=schema,
                              data=data,
-                             pk_column=pk_column)
+                             pk_column=pk_column,
+                             page=page,
+                             per_page=per_page,
+                             total_count=total_count,
+                             total_pages=total_pages,
+                             has_prev=has_prev,
+                             has_next=has_next)
     except Exception as e:
         conn.close()
         flash(f'Error viewing table: {str(e)}', 'error')
