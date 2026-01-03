@@ -61,14 +61,6 @@ def init_db():
         conn.execute('ALTER TABLE inventory ADD COLUMN buy_price REAL NOT NULL DEFAULT 0.0')
         conn.commit()
     
-    # Add purchase_date column to existing inventory table if it doesn't exist
-    try:
-        conn.execute('SELECT purchase_date FROM inventory LIMIT 1')
-    except sqlite3.OperationalError:
-        # Column doesn't exist, add it
-        conn.execute('ALTER TABLE inventory ADD COLUMN purchase_date DATE')
-        conn.commit()
-    
     # Billing table (header - one per bill)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS billing (

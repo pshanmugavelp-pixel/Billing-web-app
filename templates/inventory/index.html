@@ -334,7 +334,6 @@
                             <td>₹{{ "%.4f"|format(item['unit_price']) }}</td>
                             <td>₹{{ "%.4f"|format(item['mrp']) }}</td>
                             <td>{{ "%.4f"|format(item['gst_percentage']) }}%</td>
-                            <td>{{ item['purchase_date'] or 'N/A' }}</td>
                             <td>{{ item['updated_at'] }}</td>
                             <td class="no-print">
                                 <a href="{{ url_for('inventory.update', id=item['id']) }}"
@@ -436,7 +435,6 @@
                 {wch: 12},  // Unit Price
                 {wch: 12},  // MRP
                 {wch: 10},  // GST%
-                {wch: 15},  // Purchase Date
                 {wch: 20}   // Last Updated
             ];
             
