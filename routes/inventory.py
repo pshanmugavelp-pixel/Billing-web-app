@@ -20,10 +20,21 @@ def index():
     if per_page not in [10, 20, 50, 100]:
         per_page = 20
     
+    # Validate page number
+    if page < 1:
+        page = 1
+    
     conn = get_db_connection()
     
     # Get total count
     total_count = conn.execute('SELECT COUNT(*) as count FROM inventory').fetchone()['count']
+    
+    # Calculate pagination info
+    total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
+    
+    # Ensure page doesn't exceed total_pages
+    if page > total_pages:
+        page = total_pages
     
     # Calculate offset
     offset = (page - 1) * per_page
@@ -36,8 +47,6 @@ def index():
     
     conn.close()
     
-    # Calculate pagination info
-    total_pages = (total_count + per_page - 1) // per_page
     has_prev = page > 1
     has_next = page < total_pages
     

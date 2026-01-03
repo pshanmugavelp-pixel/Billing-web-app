@@ -88,7 +88,11 @@
 
 <div class="pagination-container no-print">
     <div class="pagination-info">
-        Showing {{ ((page - 1) * per_page) + 1 }} to {{ [page * per_page, total_count]|min }} of {{ total_count }} entries
+        {% if total_count > 0 %}
+            Showing {{ ((page - 1) * per_page) + 1 }} to {{ [page * per_page, total_count]|min }} of {{ total_count }} entries
+        {% else %}
+            No entries to display
+        {% endif %}
     </div>
     
     <div class="pagination-controls">

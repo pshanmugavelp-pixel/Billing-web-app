@@ -20,10 +20,11 @@ def index():
     if per_page not in [10, 20, 50, 100]:
         per_page = 20
     
-    conn = get_db_connection()
+    # Validate page number
+    if page < 1:
+        page = 1
     
-    # Calculate offset
-    offset = (page - 1) * per_page
+    conn = get_db_connection()
     
     if search_query:
         # Get total count for search
@@ -31,7 +32,21 @@ def index():
             SELECT COUNT(*) as count FROM customers
             WHERE customer_id LIKE ? OR vendor_code LIKE ? OR name LIKE ?
         ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchone()['count']
-        
+    else:
+        # Get total count
+        total_count = conn.execute('SELECT COUNT(*) as count FROM customers').fetchone()['count']
+    
+    # Calculate pagination info
+    total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
+    
+    # Ensure page doesn't exceed total_pages
+    if page > total_pages:
+        page = total_pages
+    
+    # Calculate offset
+    offset = (page - 1) * per_page
+    
+    if search_query:
         # Search by customer_id, vendor_code, or name with pagination
         customers = conn.execute('''
             SELECT * FROM customers
@@ -40,9 +55,6 @@ def index():
             LIMIT ? OFFSET ?
         ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', per_page, offset)).fetchall()
     else:
-        # Get total count
-        total_count = conn.execute('SELECT COUNT(*) as count FROM customers').fetchone()['count']
-        
         # Get paginated customers
         customers = conn.execute('''
             SELECT * FROM customers
@@ -52,8 +64,6 @@ def index():
     
     conn.close()
     
-    # Calculate pagination info
-    total_pages = (total_count + per_page - 1) // per_page
     has_prev = page > 1
     has_next = page < total_pages
     
@@ -149,29 +159,19 @@ def update(customer_id):
         address = request.form.get('address', '')
         state = request.form.get('state', '')
         gst_number = request.form.get('gst_number', '')
-        try:
-            conn.execute('''INSERT INTO customers (customer_id, vendor_code, name, email, mobile, address, state, gst_number)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (customer_id, vendor_code, name, email, mobile, address, state, gst_number))
-            conn.commit()
+        
+        # Validate required fields
+        if not new_customer_id or not name or not address or not state:
+            flash('Customer ID, Customer Name, Address and State are required!', 'error')
             conn.close()
-            
-            flash('Customer added successfully!', 'success')
-            return redirect(url_for('customers.index'))
-        except sqlite3.IntegrityError as e:
+            return redirect(url_for('customers.update', customer_id=customer_id))
+        
+        # Check if new customer_id already exists (excluding current customer)
+        existing_cid = conn.execute('SELECT id FROM customers WHERE customer_id = ? AND id != ?',
+                                   (new_customer_id, customer_id)).fetchone()
+        if existing_cid:
             conn.close()
-            msg = str(e)
-            if 'vendor_code' in msg:
-                flash('Vendor Code must be unique. Please provide a different Vendor Code or leave it blank.', 'error')
-            elif 'customer_id' in msg:
-                flash('Customer ID already exists. Please use a unique Customer ID.', 'error')
-            else:
-                flash(f'Database integrity error: {msg}', 'error')
-            return redirect(url_for('customers.add'))
-        except Exception as e:
-            conn.close()
-            flash(f'Error adding customer: {str(e)}', 'error')
-            return redirect(url_for('customers.add'))
+            flash('Customer ID already exists! Please use a unique ID.', 'error')
             return redirect(url_for('customers.update', customer_id=customer_id))
         
         # Check if vendor code already exists (excluding current customer, only if provided)
