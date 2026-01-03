@@ -177,7 +177,7 @@
         <div class="header">
             <div>
                 <h1>Purchase Management</h1>
-                <p class="purchase-count">Total Purchases: {{ purchases|length }}</p>
+                <p class="purchase-count">Total Purchases: {{ total_count }}</p>
             </div>
             <div class="button-group">
                 <button onclick="downloadExcel()" class="btn btn-success no-print">📥 Download Excel</button>
@@ -196,6 +196,13 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+        
+        <!-- Pagination Controls (Top) -->
+        {% if total_count > 0 %}
+            {% set route_name = 'purchases.index' %}
+            {% set extra_params = {} %}
+            {% include 'pagination.html' %}
+        {% endif %}
         
         {% if purchases %}
             <table>
@@ -249,6 +256,13 @@
                     {% endfor %}
                 </tbody>
             </table>
+            
+            <!-- Pagination Controls (Bottom) -->
+            {% if total_count > 0 %}
+                {% set route_name = 'purchases.index' %}
+                {% set extra_params = {} %}
+                {% include 'pagination.html' %}
+            {% endif %}
         {% else %}
             <div class="no-data">
                 <p>No purchases found. Click "Add Purchase" to get started!</p>

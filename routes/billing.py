@@ -11,10 +11,31 @@ billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
 @billing_bp.route('/')
 def index():
-    """Display all bills with optional filter for cancelled bills"""
+    """Display all bills with optional filter for cancelled bills and pagination"""
     show_cancelled = request.args.get('show_cancelled', 'false') == 'true'
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # Validate per_page values
+    if per_page not in [10, 20, 50, 100]:
+        per_page = 20
     
     conn = get_db_connection()
+    
+    # Get total count based on filter
+    if show_cancelled:
+        total_count = conn.execute('''
+            SELECT COUNT(*) as count FROM billing
+            WHERE payment_status = 'Cancelled'
+        ''').fetchone()['count']
+    else:
+        total_count = conn.execute('''
+            SELECT COUNT(*) as count FROM billing
+            WHERE payment_status != 'Cancelled'
+        ''').fetchone()['count']
+    
+    # Calculate offset
+    offset = (page - 1) * per_page
     
     if show_cancelled:
         # Show only cancelled bills
@@ -25,7 +46,8 @@ def index():
             JOIN customers c ON b.customer_id = c.id
             WHERE b.payment_status = 'Cancelled'
             ORDER BY b.created_at DESC
-        ''').fetchall()
+            LIMIT ? OFFSET ?
+        ''', (per_page, offset)).fetchall()
     else:
         # Show all bills except cancelled
         bills = conn.execute('''
@@ -35,10 +57,25 @@ def index():
             JOIN customers c ON b.customer_id = c.id
             WHERE b.payment_status != 'Cancelled'
             ORDER BY b.created_at DESC
-        ''').fetchall()
+            LIMIT ? OFFSET ?
+        ''', (per_page, offset)).fetchall()
     
     conn.close()
-    return render_template('billing/index.html', bills=bills, show_cancelled=show_cancelled)
+    
+    # Calculate pagination info
+    total_pages = (total_count + per_page - 1) // per_page
+    has_prev = page > 1
+    has_next = page < total_pages
+    
+    return render_template('billing/index.html',
+                         bills=bills,
+                         show_cancelled=show_cancelled,
+                         page=page,
+                         per_page=per_page,
+                         total_count=total_count,
+                         total_pages=total_pages,
+                         has_prev=has_prev,
+                         has_next=has_next)
 
 @billing_bp.route('/create', methods=['GET', 'POST'])
 def create():

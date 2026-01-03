@@ -270,7 +270,7 @@
         <div class="header">
             <div>
                 <h1>Billing Management{% if show_cancelled %} - Cancelled Bills{% endif %}</h1>
-                <p class="bill-count">Total Bills: {{ bills|length }}</p>
+                <p class="bill-count">Total Bills: {{ total_count }}</p>
             </div>
             <div class="button-group">
                 {% if not show_cancelled %}
@@ -302,6 +302,13 @@
         <div id="selectionInfo" class="selection-info no-print">
             <span class="selection-text"><span id="selectedCount">0</span> bill(s) selected</span>
         </div>
+        
+        <!-- Pagination Controls (Top) -->
+        {% if total_count > 0 %}
+            {% set route_name = 'billing.index' %}
+            {% set extra_params = {'show_cancelled': 'true' if show_cancelled else 'false'} %}
+            {% include 'pagination.html' %}
+        {% endif %}
         
         {% if bills %}
             <form id="cancelForm" method="POST" action="{{ url_for('billing.cancel_bills_confirm') }}">
@@ -355,6 +362,13 @@
                     </tbody>
                 </table>
             </form>
+            
+            <!-- Pagination Controls (Bottom) -->
+            {% if total_count > 0 %}
+                {% set route_name = 'billing.index' %}
+                {% set extra_params = {'show_cancelled': 'true' if show_cancelled else 'false'} %}
+                {% include 'pagination.html' %}
+            {% endif %}
         {% else %}
             <div class="no-data">
                 {% if show_cancelled %}

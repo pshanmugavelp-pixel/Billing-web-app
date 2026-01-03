@@ -11,22 +11,61 @@ customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
 
 @customers_bp.route('/')
 def index():
-    """Display all customers with optional search"""
+    """Display all customers with optional search and pagination"""
     search_query = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # Validate per_page values
+    if per_page not in [10, 20, 50, 100]:
+        per_page = 20
+    
     conn = get_db_connection()
     
+    # Calculate offset
+    offset = (page - 1) * per_page
+    
     if search_query:
-        # Search by customer_id, vendor_code, or name
+        # Get total count for search
+        total_count = conn.execute('''
+            SELECT COUNT(*) as count FROM customers
+            WHERE customer_id LIKE ? OR vendor_code LIKE ? OR name LIKE ?
+        ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchone()['count']
+        
+        # Search by customer_id, vendor_code, or name with pagination
         customers = conn.execute('''
             SELECT * FROM customers
             WHERE customer_id LIKE ? OR vendor_code LIKE ? OR name LIKE ?
             ORDER BY created_at DESC
-        ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+            LIMIT ? OFFSET ?
+        ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', per_page, offset)).fetchall()
     else:
-        customers = conn.execute('SELECT * FROM customers ORDER BY created_at DESC').fetchall()
+        # Get total count
+        total_count = conn.execute('SELECT COUNT(*) as count FROM customers').fetchone()['count']
+        
+        # Get paginated customers
+        customers = conn.execute('''
+            SELECT * FROM customers
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+        ''', (per_page, offset)).fetchall()
     
     conn.close()
-    return render_template('customers/index.html', customers=customers, search_query=search_query)
+    
+    # Calculate pagination info
+    total_pages = (total_count + per_page - 1) // per_page
+    has_prev = page > 1
+    has_next = page < total_pages
+    
+    return render_template('customers/index.html',
+                         customers=customers,
+                         search_query=search_query,
+                         page=page,
+                         per_page=per_page,
+                         total_count=total_count,
+                         total_pages=total_pages,
+                         has_prev=has_prev,
+                         has_next=has_next)
 
 @customers_bp.route('/add', methods=['GET', 'POST'])
 def add():

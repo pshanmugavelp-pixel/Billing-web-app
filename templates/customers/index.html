@@ -241,7 +241,7 @@
         <div class="header">
             <div>
                 <h1>Customer Management</h1>
-                <p class="customer-count">Total Customers: {{ customers|length }}</p>
+                <p class="customer-count">Total Customers: {{ total_count }}</p>
             </div>
             <div class="button-group">
                 <button id="deleteSelectedBtn" class="btn btn-delete-selected no-print" onclick="deleteSelected()">Delete Selected</button>
@@ -275,6 +275,13 @@
         <div id="selectionInfo" class="selection-info no-print">
             <span class="selection-text"><span id="selectedCount">0</span> customer(s) selected</span>
         </div>
+        
+        <!-- Pagination Controls (Top) -->
+        {% if total_count > 0 %}
+            {% set route_name = 'customers.index' %}
+            {% set extra_params = {'search': search_query} if search_query else {} %}
+            {% include 'pagination.html' %}
+        {% endif %}
         
         {% if customers %}
             <div class="table-wrapper">
@@ -330,6 +337,13 @@
                     </table>
                 </form>
             </div>
+            
+            <!-- Pagination Controls (Bottom) -->
+            {% if total_count > 0 %}
+                {% set route_name = 'customers.index' %}
+                {% set extra_params = {'search': search_query} if search_query else {} %}
+                {% include 'pagination.html' %}
+            {% endif %}
         {% else %}
             <div class="no-data">
                 <p>No customers found. Click "Add Customer" to get started!</p>
@@ -435,11 +449,11 @@
             var input = document.getElementById('searchInput');
             var clearBtn = document.getElementById('clearSearch');
             var customerCountEl = document.querySelector('.customer-count');
-            var totalCount = {{ customers|length }};
+            var totalCount = {{ total_count|default(0) }};
 
             function updateCount(visible) {
                 if (!customerCountEl) return;
-                customerCountEl.textContent = 'Showing ' + visible + ' of ' + totalCount + ' customers';
+                customerCountEl.textContent = 'Total Customers: ' + totalCount;
             }
 
             function normalize(s){ return (s||'').toString().toLowerCase(); }

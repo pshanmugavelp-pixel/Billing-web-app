@@ -11,14 +11,44 @@ purchases_bp = Blueprint('purchases', __name__, url_prefix='/purchases')
 
 @purchases_bp.route('/')
 def index():
-    """Display all purchases"""
+    """Display all purchases with pagination"""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # Validate per_page values
+    if per_page not in [10, 20, 50, 100]:
+        per_page = 20
+    
     conn = get_db_connection()
+    
+    # Get total count
+    total_count = conn.execute('SELECT COUNT(*) as count FROM purchases').fetchone()['count']
+    
+    # Calculate offset
+    offset = (page - 1) * per_page
+    
+    # Get paginated purchases
     purchases = conn.execute('''
-        SELECT * FROM purchases 
+        SELECT * FROM purchases
         ORDER BY purchase_date DESC, created_at DESC
-    ''').fetchall()
+        LIMIT ? OFFSET ?
+    ''', (per_page, offset)).fetchall()
+    
     conn.close()
-    return render_template('purchases/index.html', purchases=purchases)
+    
+    # Calculate pagination info
+    total_pages = (total_count + per_page - 1) // per_page
+    has_prev = page > 1
+    has_next = page < total_pages
+    
+    return render_template('purchases/index.html',
+                         purchases=purchases,
+                         page=page,
+                         per_page=per_page,
+                         total_count=total_count,
+                         total_pages=total_pages,
+                         has_prev=has_prev,
+                         has_next=has_next)
 
 @purchases_bp.route('/add', methods=['GET', 'POST'])
 def add():

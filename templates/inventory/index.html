@@ -243,7 +243,7 @@
         <div class="header">
             <div>
                 <h1>Inventory Management</h1>
-                <p class="item-count">Total Items: {{ items|length }}</p>
+                <p class="item-count">Total Items: {{ total_count }}</p>
             </div>
             <div class="button-group">
                 <button id="deleteSelectedBtn" class="btn btn-delete-selected no-print" onclick="deleteSelected()">Delete Selected</button>
@@ -267,6 +267,13 @@
         <div id="selectionInfo" class="selection-info no-print">
             <span class="selection-text"><span id="selectedCount">0</span> item(s) selected</span>
         </div>
+        
+        <!-- Pagination Controls (Top) -->
+        {% if total_count > 0 %}
+            {% set route_name = 'inventory.index' %}
+            {% set extra_params = {} %}
+            {% include 'pagination.html' %}
+        {% endif %}
         
         {% if items %}
             <form id="deleteForm" method="POST" action="{{ url_for('inventory.delete_multiple') }}">
@@ -344,6 +351,13 @@
                     </tbody>
                 </table>
             </form>
+            
+            <!-- Pagination Controls (Bottom) -->
+            {% if total_count > 0 %}
+                {% set route_name = 'inventory.index' %}
+                {% set extra_params = {} %}
+                {% include 'pagination.html' %}
+            {% endif %}
         {% else %}
             <div class="no-data">
                 <p>No inventory items found. Click "Add Item" to get started!</p>
