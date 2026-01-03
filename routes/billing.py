@@ -345,11 +345,13 @@ def cancel_bills_confirm():
     product_totals = {}
     
     for bill in bills:
+        # Use TEXT bill_id (like "ST123") not numeric id
+        bill_id_text = bill['bill_id']
         items = conn.execute('''
             SELECT product_id, product_name, quantity
             FROM billing_items
             WHERE bill_id = ?
-        ''', (bill['id'],)).fetchall()
+        ''', (bill_id_text,)).fetchall()
         
         for item in items:
             pid = item['product_id']
@@ -394,13 +396,19 @@ def cancel_bills():
     conn = get_db_connection()
     
     # Restore inventory for all bills being cancelled
-    for bill_id in bill_internal_ids:
-        items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
-                           (bill_id,)).fetchall()
-        
-        for item in items:
-            conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                        (item['quantity'], item['product_id']))
+    for bill_internal_id in bill_internal_ids:
+        # Get bill_id text from billing table
+        bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_internal_id,)).fetchone()
+        if bill:
+            bill_id_text = bill['bill_id']
+            
+            # Get bill items using TEXT bill_id
+            items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
+                               (bill_id_text,)).fetchall()
+            
+            for item in items:
+                conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                            (item['quantity'], item['product_id']))
     
     # Update bills to Cancelled status
     placeholders = ','.join('?' * len(bill_internal_ids))
