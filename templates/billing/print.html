@@ -14,8 +14,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-    --font-base: 0.65rem;
-    --font-small: 0.55rem;
+    --font-base: 0.85rem;
+    --font-small: 0.75rem;
     --font-large: 1.1rem;
     --pad-xs: 1px;
     --pad-sm: 2px;
@@ -39,14 +39,14 @@ body {
 /* COLUMN CONTROLLER */
 .col-sl { width: 3ch; }
 .col-hsn { width: 8ch; }
-.col-qty { width: 13ch; }
+.col-qty { width: 5ch; }
 .col-price { width: 8ch; }
-.col-taxable { width: 15ch; }
-.col-total { width: 17ch; }
-.col-item { width: auto; min-width: 36ch; }
+.col-taxable { width: 10ch; }
+.col-total { width: 15ch; }
+.col-item { width: auto; min-width: 50ch; }
 
-.col-gst-pct { width: 3ch; text-align: center; padding: 0; }
-.col-gst-amt { width: 5ch; text-align: right; padding: 0; }
+.col-gst-pct { width: 1ch; text-align: center; padding: 0; }
+.col-gst-amt { width: 2ch; text-align: right; padding: 0; }
 
 .gst-block { width: 3in; min-width: 3in; max-width: 3in; }
 .gst-cell { white-space: nowrap; text-align: center; }
@@ -269,7 +269,7 @@ th {
 
     <td colspan="4" style="text-align:center;">
         <div class="seal-box">
-            <img src="data/company_seal.png" alt="Company Seal">
+        <img src="{{ url_for('static', filename='company_seal.png') }}">   
         </div>
         <div class="sign-line">AUTHORISED SIGNATORY</div>
     </td>
