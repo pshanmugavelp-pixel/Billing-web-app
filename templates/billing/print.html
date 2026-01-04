@@ -1,406 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice #{{ bill['bill_id'] }}</title>
-    <style>
-        @page {
-            size: A5;
-            margin: 10mm;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 9px;
-            color: #000;
-            background: white;
-            padding: 5mm;
-        }
-        
-        .invoice {
-            max-width: 128mm;
-            margin: 0 auto;
-            background: white;
-        }
-        
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 5mm;
-            padding-bottom: 3mm;
-            border-bottom: 2px solid #1e3a8a;
-        }
-        
-        .logo-section {
-            width: 20mm;
-            height: 20mm;
-            border: 2px dashed #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 7px;
-            color: #999;
-            text-align: center;
-        }
-        
-        .header-content {
-            flex: 1;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 16px;
-            background: linear-gradient(90deg, #059669 0%, #1e40af 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 2mm;
-            font-weight: bold;
-        }
-        
-        .header-info {
-            font-size: 8px;
-            color: #000;
-            line-height: 1.4;
-        }
-        
-        .seal-placeholder {
-            width: 20mm;
-            height: 20mm;
-        }
-        
-        .invoice-title {
-            text-align: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: #1e3a8a;
-            margin: 3mm 0;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 3mm 0;
-        }
-        
-        table th {
-            background: white;
-            color: #1e3a8a;
-            padding: 2mm;
-            text-align: left;
-            font-size: 8px;
-            font-weight: bold;
-            border: 1px solid #ddd;
-            border-bottom: 2px solid #1e3a8a;
-        }
-        
-        table td {
-            padding: 2mm;
-            border: 1px solid #ddd;
-            font-size: 8px;
-            color: #000;
-        }
-        
-        .text-right {
-            text-align: right;
-        }
-        
-        .text-center {
-            text-align: center;
-        }
-        
-        .section-title {
-            font-size: 10px;
-            font-weight: bold;
-            color: #1e3a8a;
-            margin: 3mm 0 2mm 0;
-            padding-bottom: 1mm;
-            border-bottom: 1px solid #1e3a8a;
-        }
-        
-        .totals {
-            margin-top: 3mm;
-            float: right;
-            width: 50%;
-        }
-        
-        .totals table td {
-            padding: 1.5mm;
-        }
-        
-        .grand-total {
-            font-weight: bold;
-            font-size: 10px;
-            background: #f9f9f9;
-        }
-        
-        .grand-total td {
-            color: #059669;
-            border-top: 2px solid #059669;
-        }
-        
-        .bank-details {
-            clear: both;
-            margin-top: 5mm;
-        }
-        
-        .bank-details table td {
-            color: #059669;
-            font-weight: bold;
-        }
-        
-        .signature-section {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8mm;
-            padding-top: 3mm;
-        }
-        
-        .signature-box {
-            width: 45%;
-            text-align: center;
-        }
-        
-        .signature-line {
-            border-top: 1px solid #000;
-            margin-top: 15mm;
-            padding-top: 2mm;
-            font-size: 8px;
-            color: #000;
-        }
-        
-        .seal-section {
-            width: 25mm;
-            height: 25mm;
-            border: 2px dashed #1e3a8a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 2mm auto;
-            font-size: 7px;
-            color: #999;
-            text-align: center;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 3mm;
-            padding-top: 3mm;
-            border-top: 1px solid #ddd;
-            font-size: 7px;
-            color: #666;
-        }
-        
-        .print-button {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 10px 20px;
-            background: #1e3a8a;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            z-index: 1000;
-        }
-        
-        .print-button:hover {
-            background: #1e40af;
-        }
-        
-        @media print {
-            body {
-                padding: 0;
-            }
-            
-            .print-button {
-                display: none;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Tax Invoice</title>
+
+<style>
+@page { size: auto; margin: 8mm; }
+@media print { body { zoom: 0.98; } tr { page-break-inside: avoid; } }
+
+:root {
+    --font-base: 0.75rem;
+    --font-small: 0.6rem;
+    --font-large: 1.1rem;
+    --pad-xs: 1px;
+    --pad-sm: 2px;
+    --border-thin: 1px;
+    --border-thick: 1.5px;
+    --seller-color: #1f3a8a;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    font-size: var(--font-base);
+    line-height: 1.4;
+    margin: 0;
+    color: #000;
+}
+
+.invoice {
+    border: var(--border-thick) solid #000;
+    padding: var(--pad-sm);
+}
+
+/* COLUMN CONTROL */
+.col-sl { width: 3ch; }
+.col-hsn { width: 6ch; }
+.col-qty { width: 4ch; }
+.col-price { width: 6ch; }
+.col-taxable { width: 7ch; }
+.col-total { width: 7ch; }
+.col-item { width: auto; min-width: 36ch; }
+.col-gst-pct { width: 3ch; padding: 0; text-align: center; }
+.col-gst-amt { width: 5ch; padding: 0; text-align: right; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+th, td {
+    border: var(--border-thin) solid #000;
+    padding: var(--pad-xs);
+    word-break: break-word;
+}
+
+th { font-weight: bold; text-align: center; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.section { margin-top: 6px; }
+
+.header {
+    text-align: center;
+    border-bottom: var(--border-thick) solid #000;
+    padding-bottom: var(--pad-sm);
+}
+
+.header h1 {
+    margin: 0;
+    font-size: var(--font-large);
+    font-weight: 800;
+    color: var(--seller-color);
+}
+
+.header p {
+    margin: 2px 0;
+    font-weight: bold;
+    font-size: var(--font-small);
+    color: var(--seller-color);
+}
+
+.signature-area {
+    height: 60px;
+    vertical-align: bottom;
+    text-align: center;
+    font-weight: bold;
+}
+</style>
 </head>
+
 <body>
-    <button class="print-button" onclick="window.print()">🖨️ Print</button>
-    
-    <div class="invoice">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo-section">
-                LOGO
-            </div>
-            <div class="header-content">
-                {% if seller %}
-                <h1>{{ seller['seller_name'] }}</h1>
-                <div class="header-info">
-                    {{ seller['address'] }}<br>
-                    Email: {{ seller['email'] }} | Mobile: {{ seller['mobile'] }}<br>
-                    GST: {{ seller['gst_number'] }}
-                </div>
-                {% endif %}
-            </div>
-            <div class="seal-placeholder"></div>
-        </div>
-        
-        <div class="invoice-title">TAX INVOICE</div>
-        
-        <!-- Invoice & Customer Details -->
-        <table>
-            <tr>
-                <th colspan="2">Invoice Details</th>
-                <th colspan="2">Customer Details</th>
-            </tr>
-            <tr>
-                <td><strong>Invoice No:</strong></td>
-                <td>{{ bill['bill_id'] }}</td>
-                <td><strong>Name:</strong></td>
-                <td>{{ bill['customer_name'] }}</td>
-            </tr>
-            <tr>
-                <td><strong>Date:</strong></td>
-                <td>{{ bill['bill_date'] }}</td>
-                <td><strong>Mobile:</strong></td>
-                <td>{{ bill['mobile'] or 'N/A' }}</td>
-            </tr>
-            <tr>
-                <td><strong>Payment:</strong></td>
-                <td>{{ bill['payment_status'] }}</td>
-                <td><strong>GST No:</strong></td>
-                <td>{{ bill['gst_number'] or 'N/A' }}</td>
-            </tr>
-            <tr>
-                <td colspan="2"></td>
-                <td><strong>Address:</strong></td>
-                <td>{{ bill['address'] or 'N/A' }}</td>
-            </tr>
-        </table>
-        
-        <!-- Items -->
-        <div class="section-title">Items</div>
-        {% set has_igst = items|selectattr('igst', 'greaterthan', 0)|list|length > 0 %}
-        {% set has_cgst_sgst = items|selectattr('cgst', 'greaterthan', 0)|list|length > 0 %}
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 5%;">#</th>
-                    <th style="width: 40%;">Product Name</th>
-                    <th style="width: 10%;" class="text-center">Qty</th>
-                    <th style="width: 12%;" class="text-right">Price</th>
-                    <th style="width: 12%;" class="text-right">Taxable</th>
-                    {% if has_cgst_sgst %}
-                    <th style="width: 10%;" class="text-right">CGST</th>
-                    <th style="width: 10%;" class="text-right">SGST</th>
-                    {% endif %}
-                    {% if has_igst %}
-                    <th style="width: 10%;" class="text-right">IGST</th>
-                    {% endif %}
-                    <th style="width: 13%;" class="text-right">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                {% set item_subtotal = item['quantity'] * item['unit_price'] %}
-                <tr>
-                    <td class="text-center">{{ loop.index }}</td>
-                    <td>{{ item['product_name'] }}</td>
-                    <td class="text-center">{{ item['quantity'] }}</td>
-                    <td class="text-right">₹{{ "%.4f"|format(item['unit_price']) }}</td>
-                    <td class="text-right">₹{{ "%.4f"|format(item_subtotal) }}</td>
-                    {% if has_cgst_sgst %}
-                    <td class="text-right">
-                        {% if item['cgst'] > 0 %}₹{{ "%.4f"|format(item['cgst']) }}{% else %}-{% endif %}
-                    </td>
-                    <td class="text-right">
-                        {% if item['sgst'] > 0 %}₹{{ "%.4f"|format(item['sgst']) }}{% else %}-{% endif %}
-                    </td>
-                    {% endif %}
-                    {% if has_igst %}
-                    <td class="text-right">
-                        {% if item['igst'] > 0 %}₹{{ "%.4f"|format(item['igst']) }}{% else %}-{% endif %}
-                    </td>
-                    {% endif %}
-                    <td class="text-right"><strong>₹{{ "%.4f"|format(item['total']) }}</strong></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <!-- Totals -->
-        <div class="totals">
-            <table>
-                <tr>
-                    <td>Taxable Value:</td>
-                    <td class="text-right">₹{{ "%.4f"|format(bill['subtotal']) }}</td>
-                </tr>
-                <tr>
-                    <td>GST Amount:</td>
-                    <td class="text-right">₹{{ "%.4f"|format(bill['gst_amount']) }}</td>
-                </tr>
-                <tr class="grand-total">
-                    <td><strong>GRAND TOTAL:</strong></td>
-                    <td class="text-right"><strong>₹{{ "%.4f"|format(bill['total_amount']) }}</strong></td>
-                </tr>
-            </table>
-        </div>
-        
-        {% if bill['notes'] %}
-        <div style="clear: both; margin-top: 3mm;">
-            <div class="section-title">Notes</div>
-            <div style="padding: 2mm; border: 1px solid #ddd; font-size: 8px;">
-                {{ bill['notes'] }}
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- Bank Details -->
-        {% if seller %}
-        <div class="bank-details">
-            <div class="section-title">Bank Details</div>
-            <table>
-                <tr>
-                    <td style="width: 25%;"><strong>Account Name:</strong></td>
-                    <td style="width: 25%;">{{ seller['account_name'] }}</td>
-                    <td style="width: 25%;"><strong>Account Number:</strong></td>
-                    <td style="width: 25%;">{{ seller['account_number'] }}</td>
-                </tr>
-                <tr>
-                    <td><strong>IFSC Code:</strong></td>
-                    <td>{{ seller['ifsc_code'] }}</td>
-                    <td><strong>Bank & Branch:</strong></td>
-                    <td>{{ seller['account_type'] }} - {{ seller['branch'] }}</td>
-                </tr>
-            </table>
-        </div>
-        {% endif %}
-        
-        <!-- Signature and Seal Section -->
-        <div class="signature-section">
-            <div class="signature-box">
-                <div class="signature-line">
-                    <strong>Customer Signature</strong>
-                </div>
-            </div>
-            <div class="signature-box">
-                <div class="seal-section">
-                    Company<br>Seal
-                </div>
-                <div class="signature-line">
-                    <strong>Authorized Signature</strong>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p>This is a computer-generated invoice. Thank you for your business!</p>
-        </div>
-    </div>
+<div class="invoice">
+
+<div class="header">
+    <h1>{{ seller['seller_name'] }}</h1>
+    <p>{{ seller['address'] }}</p>
+    <p>Mob: {{ seller['mobile'] }} | Email: {{ seller['email'] }}</p>
+    <p>GSTIN: {{ seller['gst_number'] }}</p>
+</div>
+
+<div class="section text-center"><strong>TAX INVOICE</strong></div>
+
+<table class="section">
+<tr>
+    <th colspan="2">Bill To</th>
+    <th colspan="2">Ship To</th>
+    <th>Invoice No</th>
+    <td><strong>{{ bill['bill_id'] }}</strong></td>
+</tr>
+<tr>
+    <td colspan="2">
+        <strong>{{ bill['customer_name'] }}</strong><br>
+        {{ bill['address'] }}<br>
+        GST: {{ bill['gst_number'] or 'N/A' }}
+    </td>
+    <td colspan="2">
+        <strong>{{ bill['customer_name'] }}</strong><br>
+        {{ bill['address'] }}<br>
+        GST: {{ bill['gst_number'] or 'N/A' }}
+    </td>
+    <th>Date</th>
+    <td><strong>{{ bill['bill_date'] }}</strong></td>
+</tr>
+</table>
+
+{% set has_igst = items|selectattr('igst','greaterthan',0)|list|length > 0 %}
+{% set has_cgst_sgst = items|selectattr('cgst','greaterthan',0)|list|length > 0 %}
+
+<table class="section">
+<thead>
+<tr>
+    <th rowspan="2" class="col-sl">Sl</th>
+    <th rowspan="2" class="col-hsn">HSN</th>
+    <th rowspan="2" class="col-item">ITEM NAME</th>
+    <th rowspan="2" class="col-qty">QTY</th>
+    <th rowspan="2" class="col-price">PRICE</th>
+    <th rowspan="2" class="col-taxable">TAXABLE</th>
+    {% if has_cgst_sgst %}<th colspan="4">CGST / SGST</th>{% endif %}
+    {% if has_igst %}<th colspan="2">IGST</th>{% endif %}
+    <th rowspan="2" class="col-total">TOTAL</th>
+</tr>
+<tr>
+{% if has_cgst_sgst %}
+    <th class="col-gst-pct">%</th>
+    <th class="col-gst-amt">AMT</th>
+    <th class="col-gst-pct">%</th>
+    <th class="col-gst-amt">AMT</th>
+{% endif %}
+{% if has_igst %}
+    <th class="col-gst-pct">%</th>
+    <th class="col-gst-amt">AMT</th>
+{% endif %}
+</tr>
+</thead>
+
+<tbody>
+{% for item in items %}
+{% set taxable = item['quantity'] * item['unit_price'] %}
+<tr>
+    <td class="text-center">{{ loop.index }}</td>
+    <td>{{ item['hsn'] }}</td>
+    <td class="col-item"><strong>{{ item['product_name'] }}</strong></td>
+    <td class="text-center">{{ item['quantity'] }}</td>
+    <td class="text-right">{{ "%.2f"|format(item['unit_price']) }}</td>
+    <td class="text-right">{{ "%.2f"|format(taxable) }}</td>
+
+{% if has_cgst_sgst %}
+    <td class="text-center">{{ item['cgst_rate'] }}%</td>
+    <td class="text-right">{{ "%.2f"|format(item['cgst']) }}</td>
+    <td class="text-center">{{ item['sgst_rate'] }}%</td>
+    <td class="text-right">{{ "%.2f"|format(item['sgst']) }}</td>
+{% endif %}
+{% if has_igst %}
+    <td class="text-center">{{ item['igst_rate'] }}%</td>
+    <td class="text-right">{{ "%.2f"|format(item['igst']) }}</td>
+{% endif %}
+
+    <td class="text-right"><strong>{{ "%.2f"|format(item['total']) }}</strong></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<!-- TOTALS (DISPLAY ONLY – CORRECT DATA) -->
+<table class="section">
+<tr>
+    <th class="text-right" colspan="8">TAXABLE TOTAL</th>
+    <td class="text-right col-total">{{ "%.2f"|format(bill['subtotal']) }}</td>
+</tr>
+<tr>
+    <th class="text-right" colspan="8">GST TOTAL</th>
+    <td class="text-right col-total">{{ "%.2f"|format(bill['gst_amount']) }}</td>
+</tr>
+<tr>
+    <th class="text-right" colspan="8">GRAND TOTAL</th>
+    <td class="text-right col-total"><strong>{{ "%.2f"|format(bill['total_amount']) }}</strong></td>
+</tr>
+</table>
+
+<table class="section">
+<tr>
+    <td colspan="6">
+        <strong>ACCOUNT DETAILS</strong><br>
+        A/c Name: {{ seller['account_name'] }}<br>
+        A/c No: {{ seller['account_number'] }}<br>
+        IFSC: {{ seller['ifsc_code'] }}<br>
+        Branch: {{ seller['branch'] }}
+    </td>
+    <td colspan="6" class="signature-area">
+        COMPANY SEAL<br><br>
+        AUTHORISED SIGNATORY
+    </td>
+</tr>
+</table>
+
+</div>
 </body>
 </html>
