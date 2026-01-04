@@ -27,11 +27,10 @@
 
     --seller-color: #1f3a8a;
 
-    /* 🔧 COLUMN CONTROLLERS */
-    --item-min-width: 50ch;     /* ITEM NAME width */
-    --gst-pct-width: 1ch;       /* GST % width */
-    --gst-amt-width: 2ch;       /* GST AMOUNT width */
-    --gst-block-width: 2in;     /* TOTAL GST BLOCK width */
+    --item-min-width: 50ch;
+    --gst-pct-width: 1ch;
+    --gst-amt-width: 2ch;
+    --gst-block-width: 2in;
 }
 
 body {
@@ -209,10 +208,17 @@ th {
     <th rowspan="2" class="col-qty">QTY</th>
     <th rowspan="2" class="col-price">PRICE</th>
     <th rowspan="2" class="col-taxable">TAXABLE</th>
-    {% if has_cgst_sgst %}<th colspan="4" class="gst-block">CGST / SGST</th>{% endif %}
-    {% if has_igst %}<th colspan="2">IGST</th>{% endif %}
+
+    {% if has_cgst_sgst %}
+        <th colspan="4" class="gst-block">CGST / SGST</th>
+    {% endif %}
+    {% if has_igst %}
+        <th colspan="2" class="gst-block">IGST</th>
+    {% endif %}
+
     <th rowspan="2" class="col-total">TOTAL</th>
 </tr>
+
 <tr>
 {% if has_cgst_sgst %}
     <th class="col-gst-pct">%</th><th class="col-gst-amt">AMT</th>
@@ -240,16 +246,19 @@ th {
 <td class="text-center">{{ item['quantity'] }}</td>
 <td class="text-right">{{ "%.3f"|format(item['unit_price']) }}</td>
 <td class="text-right">{{ "%.3f"|format(taxable) }}</td>
+
 {% if has_cgst_sgst %}
 <td class="gst-cell">{{ "%.2f"|format(item['gst_percentage']/2) }}%</td>
 <td class="gst-cell text-right">{{ "%.3f"|format(item['cgst']) }}</td>
 <td class="gst-cell">{{ "%.2f"|format(item['gst_percentage']/2) }}%</td>
 <td class="gst-cell text-right">{{ "%.3f"|format(item['sgst']) }}</td>
 {% endif %}
+
 {% if has_igst %}
 <td class="gst-cell">{{ "%.2f"|format(item['gst_percentage']) }}%</td>
 <td class="gst-cell text-right">{{ "%.3f"|format(item['igst']) }}</td>
 {% endif %}
+
 <td class="text-right">{{ "%.3f"|format(item['total']) }}</td>
 </tr>
 {% endfor %}
@@ -259,16 +268,19 @@ th {
 <td class="text-center">{{ ns.total_qty }}</td>
 <td></td>
 <td class="text-right">{{ "%.3f"|format(ns.total_taxable) }}</td>
+
 {% if has_cgst_sgst %}
 <td class="gst-cell">{{ "%.2f"|format(gst_rate/2) }}%</td>
 <td class="gst-cell text-right">{{ "%.3f"|format(ns.total_cgst) }}</td>
 <td class="gst-cell">{{ "%.2f"|format(gst_rate/2) }}%</td>
 <td class="gst-cell text-right">{{ "%.3f"|format(ns.total_sgst) }}</td>
 {% endif %}
+
 {% if has_igst %}
 <td class="gst-cell">{{ "%.2f"|format(gst_rate) }}%</td>
 <td class="gst-cell text-right">{{ "%.3f"|format(ns.total_igst) }}</td>
 {% endif %}
+
 <td class="text-right">
     {{ "%.3f"|format(ns.total_amount) }}<br>
     <small style="font-size:0.5rem;">Round Off: {{ "%.2f"|format(bill['round_off']) }}</small><br>
