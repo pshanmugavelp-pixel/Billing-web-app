@@ -13,15 +13,25 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ================= ROOT CONTROLLERS ================= */
 :root {
     --font-base: 0.85rem;
     --font-small: 0.75rem;
     --font-large: 1.1rem;
+
     --pad-xs: 1px;
     --pad-sm: 2px;
+
     --border-thin: 1px;
     --border-thick: 1.5px;
+
     --seller-color: #1f3a8a;
+
+    /* 🔧 COLUMN CONTROLLERS */
+    --item-min-width: 50ch;     /* ITEM NAME width */
+    --gst-pct-width: 1ch;       /* GST % width */
+    --gst-amt-width: 4ch;       /* GST AMOUNT width */
+    --gst-block-width: 3in;     /* TOTAL GST BLOCK width */
 }
 
 body {
@@ -36,21 +46,43 @@ body {
     padding: var(--pad-sm);
 }
 
-/* COLUMN CONTROLLER */
+/* ================= COLUMN CONTROLLER ================= */
 .col-sl { width: 3ch; }
 .col-hsn { width: 8ch; }
 .col-qty { width: 5ch; }
 .col-price { width: 8ch; }
 .col-taxable { width: 10ch; }
 .col-total { width: 15ch; }
-.col-item { width: auto; min-width: 50ch; }
 
-.col-gst-pct { width: 1ch; text-align: center; padding: 0; }
-.col-gst-amt { width: 2ch; text-align: right; padding: 0; }
+.col-item {
+    width: auto;
+    min-width: var(--item-min-width);
+}
 
-.gst-block { width: 3in; min-width: 3in; max-width: 3in; }
-.gst-cell { white-space: nowrap; text-align: center; }
+.col-gst-pct {
+    width: var(--gst-pct-width);
+    text-align: center;
+    padding: 0;
+}
 
+.col-gst-amt {
+    width: var(--gst-amt-width);
+    text-align: right;
+    padding: 0;
+}
+
+.gst-block {
+    width: var(--gst-block-width);
+    min-width: var(--gst-block-width);
+    max-width: var(--gst-block-width);
+}
+
+.gst-cell {
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* ================= TABLE BASE ================= */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -73,7 +105,7 @@ th {
 .text-center { text-align: center; }
 .section { margin-top: 6px; }
 
-/* SELLER HEADER */
+/* ================= SELLER HEADER ================= */
 .header {
     text-align: center;
     border-bottom: var(--border-thick) solid #000;
@@ -92,14 +124,14 @@ th {
     color: var(--seller-color);
 }
 
-/* BILL TO / SHIP TO FONT */
+/* ================= BILL ADDRESS ================= */
 .bill-address {
-    font-size: 0.8rem;   /* ⬅ increased safely */
+    font-size: 0.8rem;
     line-height: 1.45;
     font-weight: bold;
 }
 
-/* SEAL & SIGNATURE */
+/* ================= SEAL & SIGN ================= */
 .seal-box {
     height: 90px;
     margin: 10px 0;
@@ -165,7 +197,6 @@ th {
 {% set has_igst = items|selectattr('igst','greaterthan',0)|list|length > 0 %}
 {% set has_cgst_sgst = items|selectattr('cgst','greaterthan',0)|list|length > 0 %}
 {% set gst_rate = items[0]['gst_percentage'] if items|length > 0 else 0 %}
-
 {% set ns = namespace(total_qty=0,total_taxable=0,total_cgst=0,total_sgst=0,total_igst=0,total_amount=0) %}
 
 <!-- ITEMS -->
@@ -240,36 +271,33 @@ th {
 {% endif %}
 <td class="text-right">
     {{ "%.4f"|format(ns.total_amount) }}<br>
-    <small style="font-size: 0.5rem;">Round Off: {{ "%.2f"|format(bill['round_off']) }}</small><br>
+    <small style="font-size:0.5rem;">Round Off: {{ "%.2f"|format(bill['round_off']) }}</small><br>
     <strong>{{ "%.2f"|format(bill['total_amount']) }}</strong>
 </td>
 </tr>
 </tbody>
 </table>
 
-<!-- BOTTOM : 3 BOXES -->
+<!-- BOTTOM -->
 <table class="section">
 <tr>
-    <td colspan="4" style="font-size: var(--font-small);">
-        <strong style="font-size: var(--font-base);">ACCOUNT DETAILS</strong><br><br>
+    <td colspan="4">
+        <strong>ACCOUNT DETAILS</strong><br><br>
         A/c Name: {{ seller['account_name'] }}<br>
         A/c No: {{ seller['account_number'] }}<br>
         IFSC: {{ seller['ifsc_code'] }}<br>
         Branch: {{ seller['branch'] }}
     </td>
 
-    <td colspan="4" style="text-align:center; font-size: var(--font-small);">
-        <strong style="font-size: var(--font-base);">
-            RECEIVED GOODS IN GOOD CONDITION<br>
-            AND ACKNOWLEDGED BY
-        </strong>
+    <td colspan="4" style="text-align:center;">
+        <strong>RECEIVED GOODS IN GOOD CONDITION<br>AND ACKNOWLEDGED BY</strong>
         <div style="height:60px;"></div>
         CUSTOMER SIGNATURE
     </td>
 
     <td colspan="4" style="text-align:center;">
         <div class="seal-box">
-        <img src="{{ url_for('static', filename='company_seal.png') }}">   
+            <img src="{{ url_for('static', filename='company_seal.png') }}">
         </div>
         <div class="sign-line">AUTHORISED SIGNATORY</div>
     </td>
