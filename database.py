@@ -70,6 +70,7 @@ def init_db():
             bill_date DATE NOT NULL,
             subtotal REAL DEFAULT 0.0,
             gst_amount REAL DEFAULT 0.0,
+            round_off REAL DEFAULT 0.0,
             total_amount REAL NOT NULL DEFAULT 0.0,
             payment_status TEXT DEFAULT 'Pending',
             notes TEXT,
@@ -140,6 +141,13 @@ def init_db():
         conn.execute('SELECT hsn_code FROM billing_items LIMIT 1')
     except sqlite3.OperationalError:
         conn.execute('ALTER TABLE billing_items ADD COLUMN hsn_code TEXT')
+        conn.commit()
+    
+    # Add round_off column to existing billing table if it doesn't exist
+    try:
+        conn.execute('SELECT round_off FROM billing LIMIT 1')
+    except sqlite3.OperationalError:
+        conn.execute('ALTER TABLE billing ADD COLUMN round_off REAL DEFAULT 0.0')
         conn.commit()
     
     # Seller information table

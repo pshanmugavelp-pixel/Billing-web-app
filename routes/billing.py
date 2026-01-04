@@ -221,14 +221,26 @@ def create():
         # Calculate totals
         subtotal = sum(float(item['subtotal']) for item in items)
         gst_amount = sum(float(item['gst_amount']) for item in items)
-        total_amount = sum(float(item['total']) for item in items)
+        total_before_round = sum(float(item['total']) for item in items)
+        
+        # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
+        import math
+        decimal_part = total_before_round - math.floor(total_before_round)
+        if decimal_part >= 0.55:
+            rounded_total = math.ceil(total_before_round)
+            round_off = rounded_total - total_before_round
+        else:
+            rounded_total = math.floor(total_before_round)
+            round_off = rounded_total - total_before_round
+        
+        total_amount = rounded_total
         
         # Insert bill header
         cursor = conn.execute('''INSERT INTO billing (bill_id, customer_id, bill_date, subtotal, gst_amount,
-                                total_amount, payment_status, notes)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
-                             payment_status, notes))
+                                round_off, total_amount, payment_status, notes)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_id, customer_id, bill_date, subtotal, gst_amount, round_off,
+                             total_amount, payment_status, notes))
         
         # Get the auto-generated numeric ID for the bill
         new_bill_numeric_id = cursor.lastrowid

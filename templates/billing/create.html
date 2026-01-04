@@ -414,6 +414,10 @@
                         <span id="display_gst">₹0.00</span>
                     </div>
                     <div class="total-row">
+                        <span>Round Off:</span>
+                        <span id="display_roundoff">₹0.00</span>
+                    </div>
+                    <div class="total-row">
                         <span>Total Amount:</span>
                         <span id="display_total">₹0.00</span>
                     </div>
@@ -731,11 +735,24 @@
         function updateTotals() {
             const subtotal = billItems.reduce((sum, item) => sum + item.subtotal, 0);
             const gstAmount = billItems.reduce((sum, item) => sum + item.gst_amount, 0);
-            const total = billItems.reduce((sum, item) => sum + item.total, 0);
+            const totalBeforeRound = billItems.reduce((sum, item) => sum + item.total, 0);
+            
+            // Calculate round-off: if decimal >= 0.55, round up, else round down
+            const decimalPart = totalBeforeRound - Math.floor(totalBeforeRound);
+            let roundedTotal, roundOff;
+            
+            if (decimalPart >= 0.55) {
+                roundedTotal = Math.ceil(totalBeforeRound);
+                roundOff = roundedTotal - totalBeforeRound;
+            } else {
+                roundedTotal = Math.floor(totalBeforeRound);
+                roundOff = roundedTotal - totalBeforeRound;
+            }
             
             document.getElementById('display_subtotal').textContent = `₹${subtotal.toFixed(2)}`;
             document.getElementById('display_gst').textContent = `₹${gstAmount.toFixed(2)}`;
-            document.getElementById('display_total').textContent = `₹${total.toFixed(2)}`;
+            document.getElementById('display_roundoff').textContent = `₹${roundOff.toFixed(2)}`;
+            document.getElementById('display_total').textContent = `₹${roundedTotal.toFixed(2)}`;
         }
         
         // Form submission

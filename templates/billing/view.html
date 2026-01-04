@@ -367,8 +367,12 @@
                 <span>₹{{ "%.4f"|format(bill['gst_amount']) }}</span>
             </div>
             <div class="total-row">
+                <span>Round Off:</span>
+                <span>₹{{ "%.2f"|format(bill['round_off']) }}</span>
+            </div>
+            <div class="total-row">
                 <span>Total Amount:</span>
-                <span>₹{{ "%.4f"|format(bill['total_amount']) }}</span>
+                <span>₹{{ "%.2f"|format(bill['total_amount']) }}</span>
             </div>
         </div>
     </div>

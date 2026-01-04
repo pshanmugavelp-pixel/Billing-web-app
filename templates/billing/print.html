@@ -14,8 +14,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-    --font-base: 0.75rem;
-    --font-small: 0.6rem;
+    --font-base: 0.65rem;
+    --font-small: 0.55rem;
     --font-large: 1.1rem;
     --pad-xs: 1px;
     --pad-sm: 2px;
@@ -60,9 +60,14 @@ table {
 th, td {
     border: var(--border-thin) solid #000;
     padding: var(--pad-xs);
+    font-size: var(--font-small);
 }
 
-th { font-weight: bold; text-align: center; }
+th {
+    font-weight: bold;
+    text-align: center;
+    font-size: var(--font-base);
+}
 
 .text-right { text-align: right; }
 .text-center { text-align: center; }
@@ -193,7 +198,7 @@ th { font-weight: bold; text-align: center; }
 <tr>
 <td class="text-center">{{ loop.index }}</td>
 <td>{{ item['hsn'] }}</td>
-<td class="col-item"><strong>{{ item['product_name'] }}</strong></td>
+<td class="col-item">{{ item['product_name'] }}</td>
 <td class="text-center">{{ item['quantity'] }}</td>
 <td class="text-right">{{ "%.4f"|format(item['unit_price']) }}</td>
 <td class="text-right">{{ "%.4f"|format(taxable) }}</td>
@@ -207,7 +212,7 @@ th { font-weight: bold; text-align: center; }
 <td class="gst-cell">{{ "%.2f"|format(item['gst_percentage']) }}%</td>
 <td class="gst-cell text-right">{{ "%.4f"|format(item['igst']) }}</td>
 {% endif %}
-<td class="text-right"><strong>{{ "%.4f"|format(item['total']) }}</strong></td>
+<td class="text-right">{{ "%.4f"|format(item['total']) }}</td>
 </tr>
 {% endfor %}
 
@@ -228,22 +233,32 @@ th { font-weight: bold; text-align: center; }
 {% endif %}
 <td class="text-right">{{ "%.4f"|format(ns.total_amount) }}</td>
 </tr>
+
+<tr style="font-weight:bold;">
+<td colspan="{% if has_cgst_sgst %}9{% elif has_igst %}7{% else %}5{% endif %}" class="text-right">ROUND OFF</td>
+<td class="text-right">{{ "%.2f"|format(bill['round_off']) }}</td>
+</tr>
+
+<tr style="font-weight:bold;">
+<td colspan="{% if has_cgst_sgst %}9{% elif has_igst %}7{% else %}5{% endif %}" class="text-right">GRAND TOTAL</td>
+<td class="text-right">{{ "%.2f"|format(bill['total_amount']) }}</td>
+</tr>
 </tbody>
 </table>
 
 <!-- BOTTOM : 3 BOXES -->
 <table class="section">
 <tr>
-    <td colspan="4">
-        <strong>ACCOUNT DETAILS</strong><br><br>
+    <td colspan="4" style="font-size: var(--font-small);">
+        <strong style="font-size: var(--font-base);">ACCOUNT DETAILS</strong><br><br>
         A/c Name: {{ seller['account_name'] }}<br>
         A/c No: {{ seller['account_number'] }}<br>
         IFSC: {{ seller['ifsc_code'] }}<br>
         Branch: {{ seller['branch'] }}
     </td>
 
-    <td colspan="4" style="text-align:center;">
-        <strong>RECEIVED GOODS IN GOOD CONDITION<br>AND ACKNOWLEDGED BY</strong>
+    <td colspan="4" style="text-align:center; font-size: var(--font-small);">
+        <strong style="font-size: var(--font-base);">RECEIVED GOODS IN GOOD CONDITION<br>AND ACKNOWLEDGED BY</strong>
         <div style="height:60px;"></div>
         CUSTOMER SIGNATURE
     </td>
