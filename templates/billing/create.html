@@ -638,6 +638,7 @@
                     const item = {
                         product_id: product.id,
                         product_name: product.product_name,
+                        hsn_code: product.hsn_code || '',
                         quantity: quantity,
                         unit_price: unitPrice,
                         subtotal: subtotal,
@@ -704,6 +705,10 @@
                         <button type="button" class="btn btn-danger" onclick="removeItem(${index})">Remove</button>
                     </div>
                     <div class="item-details">
+                        ${item.hsn_code ? `<div class="item-detail">
+                            <strong>HSN Code</strong>
+                            ${item.hsn_code}
+                        </div>` : ''}
                         <div class="item-detail">
                             <strong>Quantity</strong>
                             ${item.quantity}

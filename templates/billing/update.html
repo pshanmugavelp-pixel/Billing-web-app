@@ -421,6 +421,7 @@
                 billItems.push({
                     product_id: item.product_id,
                     product_name: item.product_name,
+                    hsn_code: item.hsn_code || '',
                     quantity: item.quantity,
                     original_quantity: item.quantity,  // Store original quantity
                     unit_price: item.unit_price,
@@ -511,6 +512,10 @@
                         <strong>${item.product_name}</strong>
                     </div>
                     <div class="item-details">
+                        ${item.hsn_code ? `<div class="item-detail">
+                            <strong>HSN Code</strong>
+                            ${item.hsn_code}
+                        </div>` : ''}
                         <div class="item-detail" style="grid-column: span 2;">
                             <strong>Quantity</strong>
                             <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">

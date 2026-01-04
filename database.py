@@ -102,6 +102,7 @@ def init_db():
             bill_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
             product_name TEXT NOT NULL,
+            hsn_code TEXT,
             quantity INTEGER NOT NULL DEFAULT 1,
             unit_price REAL NOT NULL DEFAULT 0.0,
             gst_percentage REAL NOT NULL DEFAULT 0.0,
@@ -132,6 +133,13 @@ def init_db():
         conn.execute('SELECT igst FROM billing_items LIMIT 1')
     except sqlite3.OperationalError:
         conn.execute('ALTER TABLE billing_items ADD COLUMN igst REAL NOT NULL DEFAULT 0.0')
+        conn.commit()
+    
+    # Add hsn_code column to existing billing_items table if it doesn't exist
+    try:
+        conn.execute('SELECT hsn_code FROM billing_items LIMIT 1')
+    except sqlite3.OperationalError:
+        conn.execute('ALTER TABLE billing_items ADD COLUMN hsn_code TEXT')
         conn.commit()
     
     # Seller information table

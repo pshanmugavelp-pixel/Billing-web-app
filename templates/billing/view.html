@@ -317,6 +317,7 @@
                 <tr>
                     <th>#</th>
                     <th>Product ID</th>
+                    <th>HSN Code</th>
                     <th>Product Name</th>
                     <th>Quantity</th>
                     <th>Unit Price (₹)</th>
@@ -337,6 +338,7 @@
                 <tr>
                     <td>{{ loop.index }}</td>
                     <td>{{ item['inventory_product_id'] or 'N/A' }}</td>
+                    <td>{{ item['hsn_code'] or 'N/A' }}</td>
                     <td><strong>{{ item['product_name'] }}</strong></td>
                     <td>{{ item['quantity'] }}</td>
                     <td>₹{{ "%.4f"|format(item['unit_price']) }}</td>

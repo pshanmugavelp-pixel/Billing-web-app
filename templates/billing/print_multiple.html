@@ -297,7 +297,8 @@
             <thead>
                 <tr>
                     <th style="width: 5%;">#</th>
-                    <th style="width: 40%;">Product Name</th>
+                    <th style="width: 10%;">HSN</th>
+                    <th style="width: 30%;">Product Name</th>
                     <th style="width: 10%;" class="text-center">Qty</th>
                     <th style="width: 12%;" class="text-right">Price</th>
                     <th style="width: 12%;" class="text-right">Taxable</th>
@@ -316,6 +317,7 @@
                 {% set item_subtotal = item['quantity'] * item['unit_price'] %}
                 <tr>
                     <td class="text-center">{{ loop.index }}</td>
+                    <td>{{ item['hsn_code'] or '-' }}</td>
                     <td>{{ item['product_name'] }}</td>
                     <td class="text-center">{{ item['quantity'] }}</td>
                     <td class="text-right">₹{{ "%.2f"|format(item['unit_price']) }}</td>
