@@ -365,18 +365,30 @@
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="product_select">Select Product <span class="required">*</span></label>
-                        <select id="product_select" onchange="updateUnitPrice()">
-                            <option value="">-- Select Product --</option>
-                            {% for product in inventory %}
-                            <option value="{{ product['id'] }}">{{ product['product_id'] }} - {{ product['product_name'] }} | Mfg: {{ product['manufacture_date'] or 'N/A' }} | Stock: {{ product['quantity'] }}</option>
-                            {% endfor %}
-                        </select>
+                        <div class="search-box">
+                            <label for="productSearch">Search Product <span class="required">*</span></label>
+                            <input type="text" id="productSearch" placeholder="Search by Product ID or Name..." autocomplete="off">
+                            <div class="help-text">Start typing to search for products</div>
+                            <div id="productSearchResults" class="search-results"></div>
+                        </div>
+                        <input type="hidden" id="product_select">
                     </div>
                     
                     <div class="form-group">
                         <label for="item_quantity">Quantity <span class="required">*</span></label>
                         <input type="number" id="item_quantity" min="1" value="1">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="selected_product_display">Selected Product</label>
+                        <input type="text" id="selected_product_display" disabled placeholder="No product selected" style="background: #f5f5f5;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="available_stock">Available Stock</label>
+                        <input type="text" id="available_stock" disabled placeholder="-" style="background: #f5f5f5;">
                     </div>
                 </div>
                 
@@ -542,22 +554,47 @@
                 });
         }
         
-        function updateUnitPrice() {
-            const productId = document.getElementById('product_select').value;
-            
-            if (!productId) {
-                document.getElementById('item_unit_price').value = '';
-                document.getElementById('item_subtotal_preview').value = '₹0.00';
+        // Product Search
+        const productSearch = document.getElementById('productSearch');
+        const productSearchResults = document.getElementById('productSearchResults');
+        
+        productSearch.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            if (query.length < 1) {
+                productSearchResults.classList.remove('show');
                 return;
             }
             
-            // Get product details and populate unit price
-            fetch(`/billing/api/product/${productId}`)
-                .then(response => response.json())
-                .then(product => {
-                    document.getElementById('item_unit_price').value = product.unit_price.toFixed(2);
-                    updateSubtotalPreview();
-                });
+            const filtered = inventory.filter(p =>
+                p.product_id.toLowerCase().includes(query) ||
+                p.product_name.toLowerCase().includes(query)
+            );
+            
+            if (filtered.length > 0) {
+                productSearchResults.innerHTML = filtered.map(p =>
+                    `<div class="search-result-item" onclick="selectProduct(${p.id})">
+                        <strong>${p.product_id}</strong> - ${p.product_name}<br>
+                        <small style="color: #666;">Mfg: ${p.manufacture_date || 'N/A'} | Stock: ${p.quantity} | Price: ₹${p.unit_price.toFixed(2)}</small>
+                    </div>`
+                ).join('');
+                productSearchResults.classList.add('show');
+            } else {
+                productSearchResults.innerHTML = '<div class="search-result-item">No products found</div>';
+                productSearchResults.classList.add('show');
+            }
+        });
+        
+        function selectProduct(productId) {
+            const product = inventory.find(p => p.id === productId);
+            if (product) {
+                document.getElementById('product_select').value = productId;
+                document.getElementById('selected_product_display').value = `${product.product_id} - ${product.product_name}`;
+                document.getElementById('available_stock').value = product.quantity;
+                document.getElementById('item_unit_price').value = product.unit_price.toFixed(2);
+                productSearch.value = `${product.product_id} - ${product.product_name}`;
+                productSearchResults.classList.remove('show');
+                updateSubtotalPreview();
+            }
         }
         
         function updateSubtotalPreview() {
@@ -660,6 +697,9 @@
                     
                     // Reset form
                     document.getElementById('product_select').value = '';
+                    document.getElementById('productSearch').value = '';
+                    document.getElementById('selected_product_display').value = '';
+                    document.getElementById('available_stock').value = '';
                     document.getElementById('item_quantity').value = '1';
                     document.getElementById('item_unit_price').value = '';
                     document.getElementById('item_subtotal_preview').value = '₹0.00';
@@ -790,6 +830,7 @@
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.search-box')) {
                 customerSearchResults.classList.remove('show');
+                productSearchResults.classList.remove('show');
             }
         });
     </script>

@@ -197,7 +197,7 @@ th {
 {% set ns.total_amount = ns.total_amount + item['total'] %}
 <tr>
 <td class="text-center">{{ loop.index }}</td>
-<td>{{ item['hsn'] }}</td>
+<td>{{ item['hsn_code'] or '-' }}</td>
 <td class="col-item">{{ item['product_name'] }}</td>
 <td class="text-center">{{ item['quantity'] }}</td>
 <td class="text-right">{{ "%.4f"|format(item['unit_price']) }}</td>
@@ -231,17 +231,11 @@ th {
 <td class="gst-cell">{{ "%.2f"|format(gst_rate) }}%</td>
 <td class="gst-cell text-right">{{ "%.4f"|format(ns.total_igst) }}</td>
 {% endif %}
-<td class="text-right">{{ "%.4f"|format(ns.total_amount) }}</td>
-</tr>
-
-<tr style="font-weight:bold;">
-<td colspan="{% if has_cgst_sgst %}9{% elif has_igst %}7{% else %}5{% endif %}" class="text-right">ROUND OFF</td>
-<td class="text-right">{{ "%.2f"|format(bill['round_off']) }}</td>
-</tr>
-
-<tr style="font-weight:bold;">
-<td colspan="{% if has_cgst_sgst %}9{% elif has_igst %}7{% else %}5{% endif %}" class="text-right">GRAND TOTAL</td>
-<td class="text-right">{{ "%.2f"|format(bill['total_amount']) }}</td>
+<td class="text-right">
+    {{ "%.4f"|format(ns.total_amount) }}<br>
+    <small style="font-size: 0.5rem;">Round Off: {{ "%.2f"|format(bill['round_off']) }}</small><br>
+    <strong>{{ "%.2f"|format(bill['total_amount']) }}</strong>
+</td>
 </tr>
 </tbody>
 </table>
