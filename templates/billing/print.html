@@ -38,8 +38,8 @@ body {
 
 /* COLUMN CONTROLLER */
 .col-sl { width: 3ch; }
-.col-hsn { width: 6ch; }
-.col-qty { width: 10ch; }
+.col-hsn { width: 8ch; }
+.col-qty { width: 13ch; }
 .col-price { width: 8ch; }
 .col-taxable { width: 15ch; }
 .col-total { width: 17ch; }
@@ -92,6 +92,13 @@ th {
     color: var(--seller-color);
 }
 
+/* BILL TO / SHIP TO FONT */
+.bill-address {
+    font-size: 0.8rem;   /* ⬅ increased safely */
+    line-height: 1.45;
+    font-weight: bold;
+}
+
 /* SEAL & SIGNATURE */
 .seal-box {
     height: 90px;
@@ -137,16 +144,16 @@ th {
     <th colspan="2">Bill To</th>
     <th colspan="2">Ship To</th>
     <th>Invoice No</th>
-    <td><strong>{{ bill['bill_id'] }}/25-26</strong></td>
+    <td><strong>{{ bill['bill_id'] }}/24-25</strong></td>
 </tr>
 <tr>
-    <td colspan="2">
-        <strong>{{ bill['customer_name'] }}</strong><br>
+    <td colspan="2" class="bill-address">
+        {{ bill['customer_name'] }}<br>
         {{ bill['address'] }}<br>
         GST: {{ bill['gst_number'] or 'N/A' }}
     </td>
-    <td colspan="2">
-        <strong>{{ bill['customer_name'] }}</strong><br>
+    <td colspan="2" class="bill-address">
+        {{ bill['customer_name'] }}<br>
         {{ bill['address'] }}<br>
         GST: {{ bill['gst_number'] or 'N/A' }}
     </td>
@@ -252,7 +259,10 @@ th {
     </td>
 
     <td colspan="4" style="text-align:center; font-size: var(--font-small);">
-        <strong style="font-size: var(--font-base);">RECEIVED GOODS IN GOOD CONDITION<br>AND ACKNOWLEDGED BY</strong>
+        <strong style="font-size: var(--font-base);">
+            RECEIVED GOODS IN GOOD CONDITION<br>
+            AND ACKNOWLEDGED BY
+        </strong>
         <div style="height:60px;"></div>
         CUSTOMER SIGNATURE
     </td>
