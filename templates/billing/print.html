@@ -6,7 +6,12 @@
 
 <style>
 @page { size: auto; margin: 8mm; }
-@media print { body { zoom: 0.98; } tr { page-break-inside: avoid; } }
+@media print {
+    body { zoom: 0.98; }
+    tr { page-break-inside: avoid; }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
     --font-base: 0.75rem;
@@ -23,7 +28,6 @@ body {
     font-family: Arial, sans-serif;
     font-size: var(--font-base);
     line-height: 1.4;
-    margin: 0;
     color: #000;
 }
 
@@ -32,16 +36,20 @@ body {
     padding: var(--pad-sm);
 }
 
-/* COLUMN CONTROL */
+/* COLUMN CONTROLLER */
 .col-sl { width: 3ch; }
 .col-hsn { width: 6ch; }
-.col-qty { width: 4ch; }
-.col-price { width: 6ch; }
-.col-taxable { width: 7ch; }
-.col-total { width: 7ch; }
+.col-qty { width: 10ch; }
+.col-price { width: 8ch; }
+.col-taxable { width: 15ch; }
+.col-total { width: 17ch; }
 .col-item { width: auto; min-width: 36ch; }
-.col-gst-pct { width: 3ch; padding: 0; text-align: center; }
-.col-gst-amt { width: 5ch; padding: 0; text-align: right; }
+
+.col-gst-pct { width: 3ch; text-align: center; padding: 0; }
+.col-gst-amt { width: 5ch; text-align: right; padding: 0; }
+
+.gst-block { width: 3in; min-width: 3in; max-width: 3in; }
+.gst-cell { white-space: nowrap; text-align: center; }
 
 table {
     width: 100%;
@@ -52,14 +60,15 @@ table {
 th, td {
     border: var(--border-thin) solid #000;
     padding: var(--pad-xs);
-    word-break: break-word;
 }
 
 th { font-weight: bold; text-align: center; }
+
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 .section { margin-top: 6px; }
 
+/* SELLER HEADER */
 .header {
     text-align: center;
     border-bottom: var(--border-thick) solid #000;
@@ -67,24 +76,39 @@ th { font-weight: bold; text-align: center; }
 }
 
 .header h1 {
-    margin: 0;
     font-size: var(--font-large);
     font-weight: 800;
     color: var(--seller-color);
 }
 
 .header p {
-    margin: 2px 0;
-    font-weight: bold;
     font-size: var(--font-small);
+    font-weight: bold;
     color: var(--seller-color);
 }
 
-.signature-area {
-    height: 60px;
-    vertical-align: bottom;
-    text-align: center;
+/* SEAL & SIGNATURE */
+.seal-box {
+    height: 90px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.seal-box img {
+    max-height: 85px;
+    max-width: 85px;
+    object-fit: contain;
+    filter: grayscale(100%) sepia(100%) saturate(300%) hue-rotate(200deg);
+}
+
+.sign-line {
+    margin-top: 14px;
+    padding-top: 4px;
+    border-top: 1px solid #000;
     font-weight: bold;
+    font-size: 0.65rem;
 }
 </style>
 </head>
@@ -92,6 +116,7 @@ th { font-weight: bold; text-align: center; }
 <body>
 <div class="invoice">
 
+<!-- SELLER -->
 <div class="header">
     <h1>{{ seller['seller_name'] }}</h1>
     <p>{{ seller['address'] }}</p>
@@ -101,12 +126,13 @@ th { font-weight: bold; text-align: center; }
 
 <div class="section text-center"><strong>TAX INVOICE</strong></div>
 
+<!-- BILL HEADER -->
 <table class="section">
 <tr>
     <th colspan="2">Bill To</th>
     <th colspan="2">Ship To</th>
     <th>Invoice No</th>
-    <td><strong>{{ bill['bill_id'] }}</strong></td>
+    <td><strong>{{ bill['bill_id'] }}/25-26</strong></td>
 </tr>
 <tr>
     <td colspan="2">
@@ -126,7 +152,11 @@ th { font-weight: bold; text-align: center; }
 
 {% set has_igst = items|selectattr('igst','greaterthan',0)|list|length > 0 %}
 {% set has_cgst_sgst = items|selectattr('cgst','greaterthan',0)|list|length > 0 %}
+{% set gst_rate = items[0]['gst_percentage'] if items|length > 0 else 0 %}
 
+{% set ns = namespace(total_qty=0,total_taxable=0,total_cgst=0,total_sgst=0,total_igst=0,total_amount=0) %}
+
+<!-- ITEMS -->
 <table class="section">
 <thead>
 <tr>
@@ -136,20 +166,17 @@ th { font-weight: bold; text-align: center; }
     <th rowspan="2" class="col-qty">QTY</th>
     <th rowspan="2" class="col-price">PRICE</th>
     <th rowspan="2" class="col-taxable">TAXABLE</th>
-    {% if has_cgst_sgst %}<th colspan="4">CGST / SGST</th>{% endif %}
+    {% if has_cgst_sgst %}<th colspan="4" class="gst-block">CGST / SGST</th>{% endif %}
     {% if has_igst %}<th colspan="2">IGST</th>{% endif %}
     <th rowspan="2" class="col-total">TOTAL</th>
 </tr>
 <tr>
 {% if has_cgst_sgst %}
-    <th class="col-gst-pct">%</th>
-    <th class="col-gst-amt">AMT</th>
-    <th class="col-gst-pct">%</th>
-    <th class="col-gst-amt">AMT</th>
+    <th class="col-gst-pct">%</th><th class="col-gst-amt">AMT</th>
+    <th class="col-gst-pct">%</th><th class="col-gst-amt">AMT</th>
 {% endif %}
 {% if has_igst %}
-    <th class="col-gst-pct">%</th>
-    <th class="col-gst-amt">AMT</th>
+    <th class="col-gst-pct">%</th><th class="col-gst-amt">AMT</th>
 {% endif %}
 </tr>
 </thead>
@@ -157,59 +184,75 @@ th { font-weight: bold; text-align: center; }
 <tbody>
 {% for item in items %}
 {% set taxable = item['quantity'] * item['unit_price'] %}
+{% set ns.total_qty = ns.total_qty + item['quantity'] %}
+{% set ns.total_taxable = ns.total_taxable + taxable %}
+{% set ns.total_cgst = ns.total_cgst + item['cgst'] %}
+{% set ns.total_sgst = ns.total_sgst + item['sgst'] %}
+{% set ns.total_igst = ns.total_igst + item['igst'] %}
+{% set ns.total_amount = ns.total_amount + item['total'] %}
 <tr>
-    <td class="text-center">{{ loop.index }}</td>
-    <td>{{ item['hsn'] }}</td>
-    <td class="col-item"><strong>{{ item['product_name'] }}</strong></td>
-    <td class="text-center">{{ item['quantity'] }}</td>
-    <td class="text-right">{{ "%.2f"|format(item['unit_price']) }}</td>
-    <td class="text-right">{{ "%.2f"|format(taxable) }}</td>
-
+<td class="text-center">{{ loop.index }}</td>
+<td>{{ item['hsn'] }}</td>
+<td class="col-item"><strong>{{ item['product_name'] }}</strong></td>
+<td class="text-center">{{ item['quantity'] }}</td>
+<td class="text-right">{{ "%.4f"|format(item['unit_price']) }}</td>
+<td class="text-right">{{ "%.4f"|format(taxable) }}</td>
 {% if has_cgst_sgst %}
-    <td class="text-center">{{ item['cgst_rate'] }}%</td>
-    <td class="text-right">{{ "%.2f"|format(item['cgst']) }}</td>
-    <td class="text-center">{{ item['sgst_rate'] }}%</td>
-    <td class="text-right">{{ "%.2f"|format(item['sgst']) }}</td>
+<td class="gst-cell">{{ "%.2f"|format(item['gst_percentage']/2) }}%</td>
+<td class="gst-cell text-right">{{ "%.4f"|format(item['cgst']) }}</td>
+<td class="gst-cell">{{ "%.2f"|format(item['gst_percentage']/2) }}%</td>
+<td class="gst-cell text-right">{{ "%.4f"|format(item['sgst']) }}</td>
 {% endif %}
 {% if has_igst %}
-    <td class="text-center">{{ item['igst_rate'] }}%</td>
-    <td class="text-right">{{ "%.2f"|format(item['igst']) }}</td>
+<td class="gst-cell">{{ "%.2f"|format(item['gst_percentage']) }}%</td>
+<td class="gst-cell text-right">{{ "%.4f"|format(item['igst']) }}</td>
 {% endif %}
-
-    <td class="text-right"><strong>{{ "%.2f"|format(item['total']) }}</strong></td>
+<td class="text-right"><strong>{{ "%.4f"|format(item['total']) }}</strong></td>
 </tr>
 {% endfor %}
+
+<tr style="font-weight:bold;">
+<td colspan="3" class="text-right">TOTAL</td>
+<td class="text-center">{{ ns.total_qty }}</td>
+<td></td>
+<td class="text-right">{{ "%.4f"|format(ns.total_taxable) }}</td>
+{% if has_cgst_sgst %}
+<td class="gst-cell">{{ "%.2f"|format(gst_rate/2) }}%</td>
+<td class="gst-cell text-right">{{ "%.4f"|format(ns.total_cgst) }}</td>
+<td class="gst-cell">{{ "%.2f"|format(gst_rate/2) }}%</td>
+<td class="gst-cell text-right">{{ "%.4f"|format(ns.total_sgst) }}</td>
+{% endif %}
+{% if has_igst %}
+<td class="gst-cell">{{ "%.2f"|format(gst_rate) }}%</td>
+<td class="gst-cell text-right">{{ "%.4f"|format(ns.total_igst) }}</td>
+{% endif %}
+<td class="text-right">{{ "%.4f"|format(ns.total_amount) }}</td>
+</tr>
 </tbody>
 </table>
 
-<!-- TOTALS (DISPLAY ONLY – CORRECT DATA) -->
+<!-- BOTTOM : 3 BOXES -->
 <table class="section">
 <tr>
-    <th class="text-right" colspan="8">TAXABLE TOTAL</th>
-    <td class="text-right col-total">{{ "%.2f"|format(bill['subtotal']) }}</td>
-</tr>
-<tr>
-    <th class="text-right" colspan="8">GST TOTAL</th>
-    <td class="text-right col-total">{{ "%.2f"|format(bill['gst_amount']) }}</td>
-</tr>
-<tr>
-    <th class="text-right" colspan="8">GRAND TOTAL</th>
-    <td class="text-right col-total"><strong>{{ "%.2f"|format(bill['total_amount']) }}</strong></td>
-</tr>
-</table>
-
-<table class="section">
-<tr>
-    <td colspan="6">
-        <strong>ACCOUNT DETAILS</strong><br>
+    <td colspan="4">
+        <strong>ACCOUNT DETAILS</strong><br><br>
         A/c Name: {{ seller['account_name'] }}<br>
         A/c No: {{ seller['account_number'] }}<br>
         IFSC: {{ seller['ifsc_code'] }}<br>
         Branch: {{ seller['branch'] }}
     </td>
-    <td colspan="6" class="signature-area">
-        COMPANY SEAL<br><br>
-        AUTHORISED SIGNATORY
+
+    <td colspan="4" style="text-align:center;">
+        <strong>RECEIVED GOODS IN GOOD CONDITION<br>AND ACKNOWLEDGED BY</strong>
+        <div style="height:60px;"></div>
+        CUSTOMER SIGNATURE
+    </td>
+
+    <td colspan="4" style="text-align:center;">
+        <div class="seal-box">
+            <img src="data/company_seal.png" alt="Company Seal">
+        </div>
+        <div class="sign-line">AUTHORISED SIGNATORY</div>
     </td>
 </tr>
 </table>
