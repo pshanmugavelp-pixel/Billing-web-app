@@ -247,6 +247,7 @@ def reset_table(table_name):
                     bill_date DATE NOT NULL,
                     subtotal REAL DEFAULT 0.0,
                     gst_amount REAL DEFAULT 0.0,
+                    round_off REAL DEFAULT 0.0,
                     total_amount REAL NOT NULL DEFAULT 0.0,
                     payment_status TEXT DEFAULT 'Pending',
                     notes TEXT,
@@ -258,9 +259,10 @@ def reset_table(table_name):
             conn.execute('''
                 CREATE TABLE billing_items (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    bill_id INTEGER NOT NULL,
+                    bill_id TEXT NOT NULL,
                     product_id INTEGER NOT NULL,
                     product_name TEXT NOT NULL,
+                    hsn_code TEXT,
                     quantity INTEGER NOT NULL DEFAULT 1,
                     unit_price REAL NOT NULL DEFAULT 0.0,
                     gst_percentage REAL NOT NULL DEFAULT 0.0,
@@ -269,7 +271,7 @@ def reset_table(table_name):
                     sgst REAL NOT NULL DEFAULT 0.0,
                     igst REAL NOT NULL DEFAULT 0.0,
                     total REAL NOT NULL DEFAULT 0.0,
-                    FOREIGN KEY (bill_id) REFERENCES billing (id) ON DELETE CASCADE,
+                    FOREIGN KEY (bill_id) REFERENCES billing (bill_id) ON DELETE CASCADE,
                     FOREIGN KEY (product_id) REFERENCES inventory (id)
                 )
             ''')
@@ -281,6 +283,7 @@ def reset_table(table_name):
                     address TEXT,
                     email TEXT,
                     mobile TEXT,
+                    state TEXT,
                     gst_number TEXT,
                     account_name TEXT,
                     account_number TEXT,

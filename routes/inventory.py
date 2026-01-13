@@ -167,6 +167,14 @@ def add():
 def delete(id):
     """Delete an inventory item by ID"""
     conn = get_db_connection()
+    
+    # Check if product is used in any billing items
+    billing_items = conn.execute('SELECT COUNT(*) as count FROM billing_items WHERE product_id = ?', (id,)).fetchone()
+    if billing_items and billing_items['count'] > 0:
+        conn.close()
+        flash(f'Cannot delete product! This product is used in {billing_items["count"]} billing item(s). Delete the bills first.', 'error')
+        return redirect(url_for('inventory.index'))
+    
     conn.execute('DELETE FROM inventory WHERE id = ?', (id,))
     conn.commit()
     conn.close()
@@ -184,7 +192,16 @@ def delete_multiple():
         return redirect(url_for('inventory.index'))
     
     conn = get_db_connection()
+    
+    # Check if any selected products are used in billing items
     placeholders = ','.join('?' * len(item_ids))
+    billing_items = conn.execute(f'SELECT COUNT(*) as count FROM billing_items WHERE product_id IN ({placeholders})', item_ids).fetchone()
+    
+    if billing_items and billing_items['count'] > 0:
+        conn.close()
+        flash(f'Cannot delete! {billing_items["count"]} billing item(s) reference the selected product(s). Delete the bills first.', 'error')
+        return redirect(url_for('inventory.index'))
+    
     conn.execute(f'DELETE FROM inventory WHERE id IN ({placeholders})', item_ids)
     conn.commit()
     conn.close()

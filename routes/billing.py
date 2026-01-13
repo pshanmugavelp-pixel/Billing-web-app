@@ -666,9 +666,9 @@ def update(bill_id):
         # Get current bill's bill_id text
         current_bill_id_text = current_bill['bill_id']
         
-        # Get old bill items (use numeric bill_id, not text bill_id)
+        # Get old bill items (use TEXT bill_id, not numeric ID)
         old_items = conn.execute('SELECT product_id, quantity, product_name FROM billing_items WHERE bill_id = ?',
-                                (bill_id,)).fetchall()
+                                (current_bill_id_text,)).fetchall()
         
         # If not confirmed, show preview of inventory changes
         if confirm_update != 'yes':
@@ -805,54 +805,45 @@ def update(bill_id):
                 return redirect(url_for('billing.update', bill_id=bill_id))
         
         # Calculate totals
-        subtotal = sum(float(item['quantity']) * float(item['unit_price']) for item in items)
+        subtotal = sum(float(item['subtotal']) for item in items)
         gst_amount = sum(float(item['gst_amount']) for item in items)
-        total_amount = sum(float(item['total']) for item in items)
+        total_before_round = sum(float(item['total']) for item in items)
+        
+        # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
+        import math
+        decimal_part = total_before_round - math.floor(total_before_round)
+        if decimal_part >= 0.55:
+            rounded_total = math.ceil(total_before_round)
+            round_off = rounded_total - total_before_round
+        else:
+            rounded_total = math.floor(total_before_round)
+            round_off = rounded_total - total_before_round
+        
+        total_amount = rounded_total
         
         # Update bill header
         conn.execute('''UPDATE billing SET bill_id = ?, customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
-                       total_amount = ?, payment_status = ?, notes = ?
+                       round_off = ?, total_amount = ?, payment_status = ?, notes = ?
                        WHERE id = ?''',
-                    (new_bill_id, customer_id, bill_date, subtotal, gst_amount, total_amount,
+                    (new_bill_id, customer_id, bill_date, subtotal, gst_amount, round_off, total_amount,
                      payment_status, notes, bill_id))
         
-        # Get existing billing_items to update or delete
-        existing_items = conn.execute('SELECT id FROM billing_items WHERE bill_id = ? ORDER BY id',
-                                     (bill_id,)).fetchall()
-        existing_item_ids = [item['id'] for item in existing_items]
+        # Delete all old billing items and re-insert new ones
+        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
         
-        # Update or insert bill items
-        for i, item in enumerate(items):
-            if i < len(existing_item_ids):
-                # Update existing item
-                item_id = existing_item_ids[i]
-                conn.execute('''UPDATE billing_items
-                               SET product_id = ?, product_name = ?, quantity = ?,
-                                   unit_price = ?, gst_percentage = ?, gst_amount = ?,
-                                   cgst = ?, sgst = ?, igst = ?, total = ?
-                               WHERE id = ?''',
-                            (item['product_id'], item['product_name'], item['quantity'],
-                             item['unit_price'], item['gst_percentage'],
-                             item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
-                             item.get('igst', 0), item['total'], item_id))
-            else:
-                # Insert new item
-                conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, quantity,
-                               unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (bill_id, item['product_id'], item['product_name'], item['quantity'],
-                             item['unit_price'], item['gst_percentage'],
-                             item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
-                             item.get('igst', 0), item['total']))
+        # Insert all new bill items
+        for item in items:
+            conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
+                           unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (new_bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
+                         item['quantity'], item['unit_price'], item['gst_percentage'],
+                         item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                         item.get('igst', 0), item['total']))
             
             # Reduce inventory
             conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
                         (item['quantity'], item['product_id']))
-        
-        # Delete extra items if new list is shorter than old list
-        if len(items) < len(existing_item_ids):
-            for item_id in existing_item_ids[len(items):]:
-                conn.execute('DELETE FROM billing_items WHERE id = ?', (item_id,))
         
         conn.commit()
         conn.close()
@@ -868,8 +859,9 @@ def update(bill_id):
         flash('Bill not found!', 'error')
         return redirect(url_for('billing.index'))
     
-    # Get bill items
-    items = conn.execute('SELECT * FROM billing_items WHERE bill_id = ? ORDER BY id', (bill_id,)).fetchall()
+    # Get bill items using TEXT bill_id
+    bill_id_text = bill['bill_id']
+    items = conn.execute('SELECT * FROM billing_items WHERE bill_id = ? ORDER BY id', (bill_id_text,)).fetchall()
     
     # Convert Row objects to dictionaries for JSON serialization
     customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()

@@ -213,6 +213,14 @@ def update(customer_id):
 def delete(id):
     """Delete a customer by ID"""
     conn = get_db_connection()
+    
+    # Check if customer has any bills
+    bills = conn.execute('SELECT COUNT(*) as count FROM billing WHERE customer_id = ?', (id,)).fetchone()
+    if bills and bills['count'] > 0:
+        conn.close()
+        flash(f'Cannot delete customer! This customer has {bills["count"]} associated bill(s). Delete or reassign the bills first.', 'error')
+        return redirect(url_for('customers.index'))
+    
     conn.execute('DELETE FROM customers WHERE id = ?', (id,))
     conn.commit()
     conn.close()
@@ -230,7 +238,16 @@ def delete_multiple():
         return redirect(url_for('customers.index'))
     
     conn = get_db_connection()
+    
+    # Check if any selected customers have bills
     placeholders = ','.join('?' * len(customer_ids))
+    bills = conn.execute(f'SELECT COUNT(*) as count FROM billing WHERE customer_id IN ({placeholders})', customer_ids).fetchone()
+    
+    if bills and bills['count'] > 0:
+        conn.close()
+        flash(f'Cannot delete! {bills["count"]} bill(s) are associated with the selected customer(s). Delete or reassign the bills first.', 'error')
+        return redirect(url_for('customers.index'))
+    
     conn.execute(f'DELETE FROM customers WHERE id IN ({placeholders})', customer_ids)
     conn.commit()
     conn.close()

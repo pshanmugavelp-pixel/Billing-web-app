@@ -53,14 +53,6 @@ def init_db():
         )
     ''')
     
-    # Add buy_price column to existing inventory table if it doesn't exist
-    try:
-        conn.execute('SELECT buy_price FROM inventory LIMIT 1')
-    except sqlite3.OperationalError:
-        # Column doesn't exist, add it with default value 0.0
-        conn.execute('ALTER TABLE inventory ADD COLUMN buy_price REAL NOT NULL DEFAULT 0.0')
-        conn.commit()
-    
     # Billing table (header - one per bill)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS billing (
@@ -79,28 +71,11 @@ def init_db():
         )
     ''')
     
-    # Add bill_id column to existing billing table if it doesn't exist
-    try:
-        conn.execute('SELECT bill_id FROM billing LIMIT 1')
-    except sqlite3.OperationalError:
-        # Column doesn't exist, add it
-        conn.execute('ALTER TABLE billing ADD COLUMN bill_id TEXT')
-        # Generate bill_ids for existing records
-        existing_bills = conn.execute('SELECT id FROM billing ORDER BY id').fetchall()
-        for idx, bill in enumerate(existing_bills, start=1):
-            bill_id = f'ST{idx}'
-            conn.execute('UPDATE billing SET bill_id = ? WHERE id = ?', (bill_id, bill['id']))
-        # Make bill_id unique after populating
-        conn.execute('''
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_bill_id ON billing(bill_id)
-        ''')
-        conn.commit()
-    
     # Billing items table (line items - multiple per bill)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS billing_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            bill_id INTEGER NOT NULL,
+            bill_id TEXT NOT NULL,
             product_id INTEGER NOT NULL,
             product_name TEXT NOT NULL,
             hsn_code TEXT,
@@ -112,43 +87,10 @@ def init_db():
             sgst REAL NOT NULL DEFAULT 0.0,
             igst REAL NOT NULL DEFAULT 0.0,
             total REAL NOT NULL DEFAULT 0.0,
-            FOREIGN KEY (bill_id) REFERENCES billing (id) ON DELETE CASCADE,
+            FOREIGN KEY (bill_id) REFERENCES billing (bill_id) ON DELETE CASCADE,
             FOREIGN KEY (product_id) REFERENCES inventory (id)
         )
     ''')
-    
-    # Add CGST, SGST, IGST columns to existing billing_items table if they don't exist
-    try:
-        conn.execute('SELECT cgst FROM billing_items LIMIT 1')
-    except sqlite3.OperationalError:
-        conn.execute('ALTER TABLE billing_items ADD COLUMN cgst REAL NOT NULL DEFAULT 0.0')
-        conn.commit()
-    
-    try:
-        conn.execute('SELECT sgst FROM billing_items LIMIT 1')
-    except sqlite3.OperationalError:
-        conn.execute('ALTER TABLE billing_items ADD COLUMN sgst REAL NOT NULL DEFAULT 0.0')
-        conn.commit()
-    
-    try:
-        conn.execute('SELECT igst FROM billing_items LIMIT 1')
-    except sqlite3.OperationalError:
-        conn.execute('ALTER TABLE billing_items ADD COLUMN igst REAL NOT NULL DEFAULT 0.0')
-        conn.commit()
-    
-    # Add hsn_code column to existing billing_items table if it doesn't exist
-    try:
-        conn.execute('SELECT hsn_code FROM billing_items LIMIT 1')
-    except sqlite3.OperationalError:
-        conn.execute('ALTER TABLE billing_items ADD COLUMN hsn_code TEXT')
-        conn.commit()
-    
-    # Add round_off column to existing billing table if it doesn't exist
-    try:
-        conn.execute('SELECT round_off FROM billing LIMIT 1')
-    except sqlite3.OperationalError:
-        conn.execute('ALTER TABLE billing ADD COLUMN round_off REAL DEFAULT 0.0')
-        conn.commit()
     
     # Seller information table
     conn.execute('''
@@ -169,14 +111,6 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
-    # Add state column to existing seller_info table if it doesn't exist
-    try:
-        conn.execute('SELECT state FROM seller_info LIMIT 1')
-    except sqlite3.OperationalError:
-        # Column doesn't exist, add it with default value
-        conn.execute('ALTER TABLE seller_info ADD COLUMN state TEXT')
-        conn.commit()
     
     # Insert default seller info if table is empty
     existing_seller = conn.execute('SELECT COUNT(*) as count FROM seller_info').fetchone()
@@ -211,4 +145,3 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Made with Bob
