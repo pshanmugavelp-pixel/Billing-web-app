@@ -936,5 +936,3 @@ def active_bills_export():
     
     conn.close()
     return render_template('billing/active_bills_export.html', bills_with_items=bills_with_items)
-
-# Made with Bob

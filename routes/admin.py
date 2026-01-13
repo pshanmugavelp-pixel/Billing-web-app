@@ -346,5 +346,3 @@ def reset_all():
         conn.close()
     
     return redirect(url_for('admin.index'))
-
-# Made with Bob

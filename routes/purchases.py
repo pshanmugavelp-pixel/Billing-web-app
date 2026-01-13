@@ -223,5 +223,3 @@ def delete(id):
         conn.close()
     
     return redirect(url_for('purchases.index'))
-
-# Made with Bob

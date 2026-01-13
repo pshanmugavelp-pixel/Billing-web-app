@@ -263,5 +263,3 @@ def update(id):
     item = conn.execute('SELECT * FROM inventory WHERE id = ?', (id,)).fetchone()
     conn.close()
     return render_template('inventory/update.html', item=item)
-
-# Made with Bob

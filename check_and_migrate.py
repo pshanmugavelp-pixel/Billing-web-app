@@ -72,5 +72,3 @@ for col in columns:
 
 conn.close()
 print("\nMigration completed!")
-
-# Made with Bob

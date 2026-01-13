@@ -274,5 +274,3 @@ def check_vendor():
     conn.close()
 
     return jsonify({'exists': bool(existing)})
-
-# Made with Bob

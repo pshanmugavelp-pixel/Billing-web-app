@@ -29,5 +29,3 @@ except sqlite3.OperationalError as e:
 conn.commit()
 conn.close()
 print("\nDatabase migration completed!")
-
-# Made with Bob

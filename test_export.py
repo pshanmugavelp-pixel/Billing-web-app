@@ -106,5 +106,3 @@ if __name__ == '__main__':
         print(f"\n✗ Test failed with error: {e}")
         import traceback
         traceback.print_exc()
-
-# Made with Bob
