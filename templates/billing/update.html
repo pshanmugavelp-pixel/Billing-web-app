@@ -342,8 +342,8 @@
             
             <!-- Items List -->
             <div class="items-section">
-                <h2>Bill Items - Adjust Quantities</h2>
-                <div class="help-text" style="margin-bottom: 15px; color: #666;">Use +/- buttons to adjust quantities. Minimum quantity is 1.</div>
+                <h2>Bill Items - Adjust Quantities & Prices</h2>
+                <div class="help-text" style="margin-bottom: 15px; color: #666;">Edit quantities or unit prices directly. Changes will automatically recalculate totals. Minimum quantity is 1.</div>
                 <div id="itemsList">
                     <div class="empty-items">No items in this bill.</div>
                 </div>
@@ -529,7 +529,15 @@
                         </div>
                         <div class="item-detail">
                             <strong>Unit Price</strong>
-                            ₹${item.unit_price.toFixed(2)}
+                            <div style="display: flex; align-items: center; gap: 5px; margin-top: 8px;">
+                                <span style="font-size: 16px;">₹</span>
+                                <input type="number"
+                                       value="${item.unit_price.toFixed(2)}"
+                                       min="0.01"
+                                       step="0.01"
+                                       onchange="updateUnitPrice(${index}, this.value)"
+                                       style="width: 100px; padding: 8px; font-size: 16px; text-align: right; border: 2px solid #3498db; border-radius: 5px;">
+                            </div>
                         </div>
                         <div class="item-detail">
                             <strong>GST (${item.gst_percentage}%)</strong>
@@ -565,6 +573,27 @@
             }
             
             billItems[index].quantity = quantity;
+            recalculateItem(index);
+            renderItems();
+            updateTotals();
+        }
+        
+        function updateUnitPrice(index, newValue) {
+            const unitPrice = parseFloat(newValue) || 0;
+            
+            if (unitPrice < 0) {
+                alert('Unit price cannot be negative!');
+                renderItems();
+                return;
+            }
+            
+            if (unitPrice === 0) {
+                alert('Unit price cannot be zero!');
+                renderItems();
+                return;
+            }
+            
+            billItems[index].unit_price = unitPrice;
             recalculateItem(index);
             renderItems();
             updateTotals();
