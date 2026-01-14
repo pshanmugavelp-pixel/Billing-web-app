@@ -59,6 +59,31 @@ Billing/
 
 ## Architecture
 
+### Architecture Diagram
+
+```mermaid
+flowchart LR
+   U[User / Browser]
+
+   subgraph F[Flask Web App]
+      A[app.py\nFlask application]
+      R[Blueprint Routes\n(routes/*.py)]
+      T[Jinja2 Templates\n(templates/*.html)]
+   end
+
+   subgraph D[Data Layer]
+      DB[database.py\nSQLite connection + schema]
+      S[(business.db\nSQLite)]
+   end
+
+   U -->|HTTP requests| A
+   A --> R
+   R -->|render_template(...)| T
+   R -->|SQL queries / transactions| DB
+   DB --> S
+   T -->|HTML responses| U
+```
+
 ### Flask Blueprint Structure
 The application uses Flask Blueprints for modular organization:
 
