@@ -3,8 +3,8 @@ Billing routes module
 Handles all billing-related routes with support for multiple items per bill
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from database import get_db_connection
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from database import db_connection
 from datetime import datetime
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
@@ -24,54 +24,51 @@ def index():
     if page < 1:
         page = 1
     
-    conn = get_db_connection()
-    
-    # Get total count based on filter
-    if show_cancelled:
-        total_count = conn.execute('''
-            SELECT COUNT(*) as count FROM billing
-            WHERE payment_status = 'Cancelled'
-        ''').fetchone()['count']
-    else:
-        total_count = conn.execute('''
-            SELECT COUNT(*) as count FROM billing
-            WHERE payment_status != 'Cancelled'
-        ''').fetchone()['count']
-    
-    # Calculate pagination info
-    total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
-    
-    # Ensure page doesn't exceed total_pages
-    if page > total_pages:
-        page = total_pages
-    
-    # Calculate offset
-    offset = (page - 1) * per_page
-    
-    if show_cancelled:
-        # Show only cancelled bills
-        bills = conn.execute('''
-            SELECT b.*, c.name as customer_name,
-                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
-            FROM billing b
-            JOIN customers c ON b.customer_id = c.id
-            WHERE b.payment_status = 'Cancelled'
-            ORDER BY b.created_at DESC
-            LIMIT ? OFFSET ?
-        ''', (per_page, offset)).fetchall()
-    else:
-        # Show all bills except cancelled
-        bills = conn.execute('''
-            SELECT b.*, c.name as customer_name,
-                   (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
-            FROM billing b
-            JOIN customers c ON b.customer_id = c.id
-            WHERE b.payment_status != 'Cancelled'
-            ORDER BY b.created_at DESC
-            LIMIT ? OFFSET ?
-        ''', (per_page, offset)).fetchall()
-    
-    conn.close()
+    with db_connection() as conn:
+        # Get total count based on filter
+        if show_cancelled:
+            total_count = conn.execute('''
+                SELECT COUNT(*) as count FROM billing
+                WHERE payment_status = 'Cancelled'
+            ''').fetchone()['count']
+        else:
+            total_count = conn.execute('''
+                SELECT COUNT(*) as count FROM billing
+                WHERE payment_status != 'Cancelled'
+            ''').fetchone()['count']
+
+        # Calculate pagination info
+        total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
+
+        # Ensure page doesn't exceed total_pages
+        if page > total_pages:
+            page = total_pages
+
+        # Calculate offset
+        offset = (page - 1) * per_page
+
+        if show_cancelled:
+            # Show only cancelled bills
+            bills = conn.execute('''
+                SELECT b.*, c.name as customer_name,
+                       (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
+                FROM billing b
+                JOIN customers c ON b.customer_id = c.id
+                WHERE b.payment_status = 'Cancelled'
+                ORDER BY b.created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (per_page, offset)).fetchall()
+        else:
+            # Show all bills except cancelled
+            bills = conn.execute('''
+                SELECT b.*, c.name as customer_name,
+                       (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
+                FROM billing b
+                JOIN customers c ON b.customer_id = c.id
+                WHERE b.payment_status != 'Cancelled'
+                ORDER BY b.created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (per_page, offset)).fetchall()
     
     has_prev = page > 1
     has_next = page < total_pages
@@ -89,110 +86,45 @@ def index():
 @billing_bp.route('/create', methods=['GET', 'POST'])
 def create():
     """Create a new bill with multiple items"""
-    conn = get_db_connection()
-    
-    # Get seller information for state comparison
-    seller = conn.execute('SELECT state FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
-    seller_state = seller['state'] if seller and seller['state'] else ''
-    
-    # Get customers and inventory for form
-    customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
-    customers = [dict(row) for row in customers_rows]
-    
-    inventory_rows = conn.execute('SELECT * FROM inventory WHERE quantity > 0 ORDER BY product_name').fetchall()
-    inventory = [dict(row) for row in inventory_rows]
-    
-    if request.method == 'POST':
-        bill_id = request.form.get('bill_id', '').strip()
-        bill_id_mode = request.form.get('bill_id_mode', 'auto')
-        customer_id = request.form.get('customer_id', '')
-        bill_date = request.form.get('bill_date', '')
-        payment_status = request.form.get('payment_status', 'Pending')
-        notes = request.form.get('notes', '')
-        
-        # Handle bill_id generation
-        if bill_id_mode == 'auto' or not bill_id:
-            # Auto-generate bill_id in format ST###
-            last_bill = conn.execute('SELECT bill_id FROM billing ORDER BY id DESC LIMIT 1').fetchone()
-            if last_bill and last_bill['bill_id']:
-                # Extract number from last bill_id (e.g., ST486 -> 486)
-                try:
-                    last_num = int(last_bill['bill_id'][2:])  # Skip 'ST' prefix
-                    next_num = last_num + 1
-                except (ValueError, IndexError):
+    with db_connection() as conn:
+        # Get seller information for state comparison
+        seller = conn.execute('SELECT state FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+        seller_state = seller['state'] if seller and seller['state'] else ''
+
+        # Get customers and inventory for form
+        customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
+        customers = [dict(row) for row in customers_rows]
+
+        inventory_rows = conn.execute('SELECT * FROM inventory WHERE quantity > 0 ORDER BY product_name').fetchall()
+        inventory = [dict(row) for row in inventory_rows]
+
+        if request.method == 'POST':
+            bill_id = request.form.get('bill_id', '').strip()
+            bill_id_mode = request.form.get('bill_id_mode', 'auto')
+            customer_id = request.form.get('customer_id', '')
+            bill_date = request.form.get('bill_date', '')
+            payment_status = request.form.get('payment_status', 'Pending')
+            notes = request.form.get('notes', '')
+
+            # Handle bill_id generation
+            if bill_id_mode == 'auto' or not bill_id:
+                # Auto-generate bill_id in format ST###
+                last_bill = conn.execute('SELECT bill_id FROM billing ORDER BY id DESC LIMIT 1').fetchone()
+                if last_bill and last_bill['bill_id']:
+                    # Extract number from last bill_id (e.g., ST486 -> 486)
+                    try:
+                        last_num = int(last_bill['bill_id'][2:])  # Skip 'ST' prefix
+                        next_num = last_num + 1
+                    except (ValueError, IndexError):
+                        next_num = 1
+                else:
                     next_num = 1
+                bill_id = f'ST{next_num}'
             else:
-                next_num = 1
-            bill_id = f'ST{next_num}'
-        else:
-            # Manual mode - validate uniqueness
-            existing = conn.execute('SELECT id FROM billing WHERE bill_id = ?', (bill_id,)).fetchone()
-            if existing:
-                flash(f'Bill ID "{bill_id}" already exists! Please use a different ID.', 'error')
-                # Return to form with existing data
-                form_data = {
-                    'bill_id': bill_id,
-                    'customer_id': customer_id,
-                    'bill_date': bill_date,
-                    'payment_status': payment_status,
-                    'notes': notes,
-                    'items_data': request.form.get('items_data', '[]')
-                }
-                conn.close()
-                return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
-        
-        # Get items data (sent as JSON)
-        import json
-        items_json = request.form.get('items_data', '[]')
-        items = json.loads(items_json)
-        
-        if not customer_id or not bill_date:
-            flash('Customer and Bill Date are required!', 'error')
-            # Return to form with existing data
-            form_data = {
-                'bill_id': bill_id,
-                'customer_id': customer_id,
-                'bill_date': bill_date,
-                'payment_status': payment_status,
-                'notes': notes,
-                'items_data': items_json
-            }
-            conn.close()
-            return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
-        
-        if not items or len(items) == 0:
-            flash('Please add at least one item to the bill!', 'error')
-            # Return to form with existing data
-            form_data = {
-                'bill_id': bill_id,
-                'customer_id': customer_id,
-                'bill_date': bill_date,
-                'payment_status': payment_status,
-                'notes': notes,
-                'items_data': items_json
-            }
-            conn.close()
-            return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
-        
-        # Group items by product_id and sum quantities for duplicate products
-        product_quantities = {}
-        for item in items:
-            product_id = item['product_id']
-            if product_id in product_quantities:
-                product_quantities[product_id]['total_quantity'] += item['quantity']
-            else:
-                product_quantities[product_id] = {
-                    'total_quantity': item['quantity'],
-                    'product_name': item['product_name']
-                }
-        
-        # Check inventory for all products (considering total quantities)
-        for product_id, data in product_quantities.items():
-            product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
-                                 (product_id,)).fetchone()
-            if product:
-                if product['quantity'] < data['total_quantity']:
-                    flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Requested: {data["total_quantity"]}, Available: {product["quantity"]}', 'error')
+                # Manual mode - validate uniqueness
+                existing = conn.execute('SELECT id FROM billing WHERE bill_id = ?', (bill_id,)).fetchone()
+                if existing:
+                    flash(f'Bill ID "{bill_id}" already exists! Please use a different ID.', 'error')
                     # Return to form with existing data
                     form_data = {
                         'bill_id': bill_id,
@@ -200,12 +132,17 @@ def create():
                         'bill_date': bill_date,
                         'payment_status': payment_status,
                         'notes': notes,
-                        'items_data': items_json
+                        'items_data': request.form.get('items_data', '[]')
                     }
-                    conn.close()
                     return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
-            else:
-                flash(f'Product {data["product_name"]} not found in inventory!', 'error')
+
+            # Get items data (sent as JSON)
+            import json
+            items_json = request.form.get('items_data', '[]')
+            items = json.loads(items_json)
+
+            if not customer_id or not bill_date:
+                flash('Customer and Bill Date are required!', 'error')
                 # Return to form with existing data
                 form_data = {
                     'bill_id': bill_id,
@@ -215,152 +152,201 @@ def create():
                     'notes': notes,
                     'items_data': items_json
                 }
-                conn.close()
                 return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
-        
-        # Calculate totals
-        subtotal = sum(float(item['subtotal']) for item in items)
-        gst_amount = sum(float(item['gst_amount']) for item in items)
-        total_before_round = sum(float(item['total']) for item in items)
-        
-        # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
-        import math
-        decimal_part = total_before_round - math.floor(total_before_round)
-        if decimal_part >= 0.55:
-            rounded_total = math.ceil(total_before_round)
-            round_off = rounded_total - total_before_round
-        else:
-            rounded_total = math.floor(total_before_round)
-            round_off = rounded_total - total_before_round
-        
-        total_amount = rounded_total
-        
-        # Multi-step write operations should be atomic
-        try:
-            # Insert bill header
-            cursor = conn.execute('''INSERT INTO billing (bill_id, customer_id, bill_date, subtotal, gst_amount,
-                                    round_off, total_amount, payment_status, notes)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                                (bill_id, customer_id, bill_date, subtotal, gst_amount, round_off,
-                                 total_amount, payment_status, notes))
 
-            # Get the auto-generated numeric ID for the bill (kept for backward compatibility)
-            new_bill_numeric_id = cursor.lastrowid
+            if not items or len(items) == 0:
+                flash('Please add at least one item to the bill!', 'error')
+                # Return to form with existing data
+                form_data = {
+                    'bill_id': bill_id,
+                    'customer_id': customer_id,
+                    'bill_date': bill_date,
+                    'payment_status': payment_status,
+                    'notes': notes,
+                    'items_data': items_json
+                }
+                return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
 
-            # Insert bill items and update inventory (use TEXT bill_id, not numeric ID)
+            # Group items by product_id and sum quantities for duplicate products
+            product_quantities = {}
             for item in items:
-                conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
-                               unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
-                             item['quantity'], item['unit_price'], item['gst_percentage'],
-                             item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
-                             item.get('igst', 0), item['total']))
+                product_id = item['product_id']
+                if product_id in product_quantities:
+                    product_quantities[product_id]['total_quantity'] += item['quantity']
+                else:
+                    product_quantities[product_id] = {
+                        'total_quantity': item['quantity'],
+                        'product_name': item['product_name']
+                    }
 
-                # Reduce inventory
-                conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-                            (item['quantity'], item['product_id']))
+            # Check inventory for all products (considering total quantities)
+            for product_id, data in product_quantities.items():
+                product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
+                                     (product_id,)).fetchone()
+                if product:
+                    if product['quantity'] < data['total_quantity']:
+                        flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Requested: {data["total_quantity"]}, Available: {product["quantity"]}', 'error')
+                        # Return to form with existing data
+                        form_data = {
+                            'bill_id': bill_id,
+                            'customer_id': customer_id,
+                            'bill_date': bill_date,
+                            'payment_status': payment_status,
+                            'notes': notes,
+                            'items_data': items_json
+                        }
+                        return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
+                else:
+                    flash(f'Product {data["product_name"]} not found in inventory!', 'error')
+                    # Return to form with existing data
+                    form_data = {
+                        'bill_id': bill_id,
+                        'customer_id': customer_id,
+                        'bill_date': bill_date,
+                        'payment_status': payment_status,
+                        'notes': notes,
+                        'items_data': items_json
+                    }
+                    return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
 
-            conn.commit()
+            # Calculate totals
+            subtotal = sum(float(item['subtotal']) for item in items)
+            gst_amount = sum(float(item['gst_amount']) for item in items)
+            total_before_round = sum(float(item['total']) for item in items)
 
-            flash(f'Bill {bill_id} created successfully with {len(items)} item(s)! Inventory updated.', 'success')
-            return redirect(url_for('billing.index'))
-        except Exception as e:
-            conn.rollback()
-            flash(f'Error creating bill: {str(e)}', 'error')
-            form_data = {
-                'bill_id': bill_id,
-                'customer_id': customer_id,
-                'bill_date': bill_date,
-                'payment_status': payment_status,
-                'notes': notes,
-                'items_data': items_json
-            }
-            return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
-        finally:
-            conn.close()
-    
-    # GET request - show empty form
-    conn.close()
-    return render_template('billing/create.html', customers=customers, inventory=inventory,
-                         form_data=None, seller_state=seller_state)
+            # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
+            import math
+            decimal_part = total_before_round - math.floor(total_before_round)
+            if decimal_part >= 0.55:
+                rounded_total = math.ceil(total_before_round)
+                round_off = rounded_total - total_before_round
+            else:
+                rounded_total = math.floor(total_before_round)
+                round_off = rounded_total - total_before_round
+
+            total_amount = rounded_total
+
+            # Multi-step write operations should be atomic
+            try:
+                # Insert bill header
+                cursor = conn.execute('''INSERT INTO billing (bill_id, customer_id, bill_date, subtotal, gst_amount,
+                                        round_off, total_amount, payment_status, notes)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                    (bill_id, customer_id, bill_date, subtotal, gst_amount, round_off,
+                                     total_amount, payment_status, notes))
+
+                # Get the auto-generated numeric ID for the bill (kept for backward compatibility)
+                new_bill_numeric_id = cursor.lastrowid
+
+                # Insert bill items and update inventory (use TEXT bill_id, not numeric ID)
+                for item in items:
+                    conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
+                                   unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                (bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
+                                 item['quantity'], item['unit_price'], item['gst_percentage'],
+                                 item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                                 item.get('igst', 0), item['total']))
+
+                    # Reduce inventory
+                    conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
+                                (item['quantity'], item['product_id']))
+
+                conn.commit()
+
+                flash(f'Bill {bill_id} created successfully with {len(items)} item(s)! Inventory updated.', 'success')
+                return redirect(url_for('billing.index'))
+            except Exception:
+                conn.rollback()
+                current_app.logger.exception('Error creating bill')
+                flash('Could not create the bill. Please try again.', 'error')
+                form_data = {
+                    'bill_id': bill_id,
+                    'customer_id': customer_id,
+                    'bill_date': bill_date,
+                    'payment_status': payment_status,
+                    'notes': notes,
+                    'items_data': items_json
+                }
+                return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
+
+        # GET request - show empty form
+        return render_template('billing/create.html', customers=customers, inventory=inventory,
+                             form_data=None, seller_state=seller_state)
 
 @billing_bp.route('/api/customer/<int:customer_id>')
 def get_customer(customer_id):
     """API endpoint to get customer details"""
-    conn = get_db_connection()
-    customer = conn.execute('SELECT * FROM customers WHERE id = ?', (customer_id,)).fetchone()
-    conn.close()
-    
-    if customer:
-        return jsonify({
-            'id': customer['id'],
-            'customer_id': customer['customer_id'],
-            'name': customer['name'],
-            'vendor_code': customer['vendor_code'],
-            'state': customer['state'],
-            'address': customer['address']
-        })
+    with db_connection() as conn:
+        customer = conn.execute('SELECT * FROM customers WHERE id = ?', (customer_id,)).fetchone()
+
+        if customer:
+            return jsonify({
+                'id': customer['id'],
+                'customer_id': customer['customer_id'],
+                'name': customer['name'],
+                'vendor_code': customer['vendor_code'],
+                'state': customer['state'],
+                'address': customer['address']
+            })
+
     return jsonify({'error': 'Customer not found'}), 404
 
 @billing_bp.route('/api/product/<int:product_id>')
 def get_product(product_id):
     """API endpoint to get product details"""
-    conn = get_db_connection()
-    product = conn.execute('SELECT * FROM inventory WHERE id = ?', (product_id,)).fetchone()
-    conn.close()
-    
-    if product:
-        return jsonify({
-            'id': product['id'],
-            'product_id': product['product_id'],
-            'product_name': product['product_name'],
-            'hsn_code': product['hsn_code'],
-            'manufacture_date': product['manufacture_date'],
-            'expiry_month': product['expiry_month'],
-            'quantity': product['quantity'],
-            'unit_price': product['unit_price'],
-            'mrp': product['mrp'],
-            'gst_percentage': product['gst_percentage']
-        })
+    with db_connection() as conn:
+        product = conn.execute('SELECT * FROM inventory WHERE id = ?', (product_id,)).fetchone()
+
+        if product:
+            return jsonify({
+                'id': product['id'],
+                'product_id': product['product_id'],
+                'product_name': product['product_name'],
+                'hsn_code': product['hsn_code'],
+                'manufacture_date': product['manufacture_date'],
+                'expiry_month': product['expiry_month'],
+                'quantity': product['quantity'],
+                'unit_price': product['unit_price'],
+                'mrp': product['mrp'],
+                'gst_percentage': product['gst_percentage']
+            })
+
     return jsonify({'error': 'Product not found'}), 404
 
 @billing_bp.route('/delete/<int:id>')
 def delete(id):
     """Delete a bill by ID"""
-    conn = get_db_connection()
-    
-    # Get bill_id text from billing table
-    bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (id,)).fetchone()
-    if not bill:
-        flash('Bill not found!', 'error')
-        conn.close()
-        return redirect(url_for('billing.index'))
-    
-    bill_id_text = bill['bill_id']
-    
-    # Get bill items to restore inventory
-    items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?', (bill_id_text,)).fetchall()
-    
-    try:
-        for item in items:
-            # Restore inventory quantity
-            conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                        (item['quantity'], item['product_id']))
+    with db_connection() as conn:
+        # Get bill_id text from billing table
+        bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (id,)).fetchone()
+        if not bill:
+            flash('Bill not found!', 'error')
+            return redirect(url_for('billing.index'))
 
-        # Delete bill items and bill
-        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id_text,))
-        conn.execute('DELETE FROM billing WHERE id = ?', (id,))
-        conn.commit()
+        bill_id_text = bill['bill_id']
 
-        flash('Bill deleted successfully! Inventory restored.', 'success')
-        return redirect(url_for('billing.index'))
-    except Exception as e:
-        conn.rollback()
-        flash(f'Error deleting bill: {str(e)}', 'error')
-        return redirect(url_for('billing.index'))
-    finally:
-        conn.close()
+        # Get bill items to restore inventory
+        items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?', (bill_id_text,)).fetchall()
+
+        try:
+            for item in items:
+                # Restore inventory quantity
+                conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                            (item['quantity'], item['product_id']))
+
+            # Delete bill items and bill
+            conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id_text,))
+            conn.execute('DELETE FROM billing WHERE id = ?', (id,))
+            conn.commit()
+
+            flash('Bill deleted successfully! Inventory restored.', 'success')
+            return redirect(url_for('billing.index'))
+        except Exception:
+            conn.rollback()
+            current_app.logger.exception('Error deleting bill id=%s', id)
+            flash('Could not delete the bill. Please try again.', 'error')
+            return redirect(url_for('billing.index'))
 
 @billing_bp.route('/cancel-bills-confirm', methods=['POST'])
 def cancel_bills_confirm():
@@ -371,60 +357,57 @@ def cancel_bills_confirm():
         flash('No bills selected!', 'error')
         return redirect(url_for('billing.index'))
     
-    conn = get_db_connection()
-    
-    # Get bill details
-    placeholders = ','.join('?' * len(bill_internal_ids))
-    bills = conn.execute(f'''
-        SELECT b.*, c.name as customer_name
-        FROM billing b
-        JOIN customers c ON b.customer_id = c.id
-        WHERE b.id IN ({placeholders})
-    ''', bill_internal_ids).fetchall()
-    
-    # Calculate inventory changes for all selected bills
-    inventory_changes = []
-    product_totals = {}
-    
-    for bill in bills:
-        # Use TEXT bill_id (like "ST123") not numeric id
-        bill_id_text = bill['bill_id']
-        items = conn.execute('''
-            SELECT product_id, product_name, quantity
-            FROM billing_items
-            WHERE bill_id = ?
-        ''', (bill_id_text,)).fetchall()
-        
-        for item in items:
-            pid = item['product_id']
-            if pid in product_totals:
-                product_totals[pid]['quantity'] += item['quantity']
-            else:
-                product_totals[pid] = {
-                    'product_name': item['product_name'],
-                    'quantity': item['quantity']
-                }
-    
-    # Get current inventory and calculate changes
-    for pid, data in product_totals.items():
-        current_inv = conn.execute('SELECT quantity FROM inventory WHERE id = ?', (pid,)).fetchone()
-        current_qty = current_inv['quantity'] if current_inv else 0
-        new_qty = current_qty + data['quantity']
-        
-        inventory_changes.append({
-            'product_id': pid,
-            'product_name': data['product_name'],
-            'current_qty': current_qty,
-            'restore_qty': data['quantity'],
-            'new_qty': new_qty
-        })
-    
-    conn.close()
-    
-    return render_template('billing/cancel_confirm.html',
-                         bills=[dict(b) for b in bills],
-                         bill_ids=bill_internal_ids,
-                         inventory_changes=inventory_changes)
+    with db_connection() as conn:
+        # Get bill details
+        placeholders = ','.join('?' * len(bill_internal_ids))
+        bills = conn.execute(f'''
+            SELECT b.*, c.name as customer_name
+            FROM billing b
+            JOIN customers c ON b.customer_id = c.id
+            WHERE b.id IN ({placeholders})
+        ''', bill_internal_ids).fetchall()
+
+        # Calculate inventory changes for all selected bills
+        inventory_changes = []
+        product_totals = {}
+
+        for bill in bills:
+            # Use TEXT bill_id (like "ST123") not numeric id
+            bill_id_text = bill['bill_id']
+            items = conn.execute('''
+                SELECT product_id, product_name, quantity
+                FROM billing_items
+                WHERE bill_id = ?
+            ''', (bill_id_text,)).fetchall()
+
+            for item in items:
+                pid = item['product_id']
+                if pid in product_totals:
+                    product_totals[pid]['quantity'] += item['quantity']
+                else:
+                    product_totals[pid] = {
+                        'product_name': item['product_name'],
+                        'quantity': item['quantity']
+                    }
+
+        # Get current inventory and calculate changes
+        for pid, data in product_totals.items():
+            current_inv = conn.execute('SELECT quantity FROM inventory WHERE id = ?', (pid,)).fetchone()
+            current_qty = current_inv['quantity'] if current_inv else 0
+            new_qty = current_qty + data['quantity']
+
+            inventory_changes.append({
+                'product_id': pid,
+                'product_name': data['product_name'],
+                'current_qty': current_qty,
+                'restore_qty': data['quantity'],
+                'new_qty': new_qty
+            })
+
+        return render_template('billing/cancel_confirm.html',
+                             bills=[dict(b) for b in bills],
+                             bill_ids=bill_internal_ids,
+                             inventory_changes=inventory_changes)
 
 @billing_bp.route('/cancel-bills', methods=['POST'])
 def cancel_bills():
@@ -435,39 +418,37 @@ def cancel_bills():
         flash('No bills selected!', 'error')
         return redirect(url_for('billing.index'))
     
-    conn = get_db_connection()
+    with db_connection() as conn:
+        try:
+            # Restore inventory for all bills being cancelled
+            for bill_internal_id in bill_internal_ids:
+                # Get bill_id text from billing table
+                bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_internal_id,)).fetchone()
+                if bill:
+                    bill_id_text = bill['bill_id']
 
-    try:
-        # Restore inventory for all bills being cancelled
-        for bill_internal_id in bill_internal_ids:
-            # Get bill_id text from billing table
-            bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_internal_id,)).fetchone()
-            if bill:
-                bill_id_text = bill['bill_id']
+                    # Get bill items using TEXT bill_id
+                    items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
+                                       (bill_id_text,)).fetchall()
 
-                # Get bill items using TEXT bill_id
-                items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
-                                   (bill_id_text,)).fetchall()
+                    for item in items:
+                        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                                    (item['quantity'], item['product_id']))
 
-                for item in items:
-                    conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                                (item['quantity'], item['product_id']))
+            # Update bills to Cancelled status
+            placeholders = ','.join('?' * len(bill_internal_ids))
+            conn.execute(f'UPDATE billing SET payment_status = ? WHERE id IN ({placeholders})',
+                        ['Cancelled'] + bill_internal_ids)
 
-        # Update bills to Cancelled status
-        placeholders = ','.join('?' * len(bill_internal_ids))
-        conn.execute(f'UPDATE billing SET payment_status = ? WHERE id IN ({placeholders})',
-                    ['Cancelled'] + bill_internal_ids)
+            conn.commit()
 
-        conn.commit()
-
-        flash(f'{len(bill_internal_ids)} bill(s) cancelled successfully! Inventory restored.', 'success')
-        return redirect(url_for('billing.index'))
-    except Exception as e:
-        conn.rollback()
-        flash(f'Error cancelling bills: {str(e)}', 'error')
-        return redirect(url_for('billing.index'))
-    finally:
-        conn.close()
+            flash(f'{len(bill_internal_ids)} bill(s) cancelled successfully! Inventory restored.', 'success')
+            return redirect(url_for('billing.index'))
+        except Exception:
+            conn.rollback()
+            current_app.logger.exception('Error cancelling bills')
+            flash('Could not cancel the selected bills. Please try again.', 'error')
+            return redirect(url_for('billing.index'))
 
 @billing_bp.route('/delete-multiple', methods=['POST'])
 def delete_multiple():
@@ -478,112 +459,106 @@ def delete_multiple():
         flash('No bills selected!', 'error')
         return redirect(url_for('billing.index'))
     
-    conn = get_db_connection()
+    with db_connection() as conn:
+        try:
+            # Get bill_id texts for the selected bills
+            placeholders = ','.join('?' * len(bill_internal_ids))
+            bills = conn.execute(f'SELECT bill_id FROM billing WHERE id IN ({placeholders})', bill_internal_ids).fetchall()
+            bill_id_texts = [bill['bill_id'] for bill in bills]
 
-    try:
-        # Get bill_id texts for the selected bills
-        placeholders = ','.join('?' * len(bill_internal_ids))
-        bills = conn.execute(f'SELECT bill_id FROM billing WHERE id IN ({placeholders})', bill_internal_ids).fetchall()
-        bill_id_texts = [bill['bill_id'] for bill in bills]
+            # Restore inventory for all bills being deleted
+            placeholders_text = ','.join('?' * len(bill_id_texts))
+            items = conn.execute(f'SELECT product_id, quantity FROM billing_items WHERE bill_id IN ({placeholders_text})',
+                                bill_id_texts).fetchall()
 
-        # Restore inventory for all bills being deleted
-        placeholders_text = ','.join('?' * len(bill_id_texts))
-        items = conn.execute(f'SELECT product_id, quantity FROM billing_items WHERE bill_id IN ({placeholders_text})',
-                            bill_id_texts).fetchall()
+            for item in items:
+                conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                            (item['quantity'], item['product_id']))
 
-        for item in items:
-            conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                        (item['quantity'], item['product_id']))
+            # Delete bill items and bills
+            conn.execute(f'DELETE FROM billing_items WHERE bill_id IN ({placeholders_text})', bill_id_texts)
+            placeholders_int = ','.join('?' * len(bill_internal_ids))
+            conn.execute(f'DELETE FROM billing WHERE id IN ({placeholders_int})', bill_internal_ids)
 
-        # Delete bill items and bills
-        conn.execute(f'DELETE FROM billing_items WHERE bill_id IN ({placeholders_text})', bill_id_texts)
-        placeholders_int = ','.join('?' * len(bill_internal_ids))
-        conn.execute(f'DELETE FROM billing WHERE id IN ({placeholders_int})', bill_internal_ids)
+            conn.commit()
 
-        conn.commit()
-
-        flash(f'{len(bill_internal_ids)} bill(s) deleted successfully! Inventory restored.', 'success')
-        return redirect(url_for('billing.index'))
-    except Exception as e:
-        conn.rollback()
-        flash(f'Error deleting bills: {str(e)}', 'error')
-        return redirect(url_for('billing.index'))
-    finally:
-        conn.close()
+            flash(f'{len(bill_internal_ids)} bill(s) deleted successfully! Inventory restored.', 'success')
+            return redirect(url_for('billing.index'))
+        except Exception:
+            conn.rollback()
+            current_app.logger.exception('Error deleting multiple bills')
+            flash('Could not delete the selected bills. Please try again.', 'error')
+            return redirect(url_for('billing.index'))
 
 @billing_bp.route('/view/<int:id>')
 def view(id):
     """View bill details with all items"""
-    conn = get_db_connection()
-    bill = conn.execute('''
-        SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
-        FROM billing b
-        JOIN customers c ON b.customer_id = c.id
-        WHERE b.id = ?
-    ''', (id,)).fetchone()
-    
-    if not bill:
-        flash('Bill not found!', 'error')
-        conn.close()
-        return redirect(url_for('billing.index'))
-    
-    # Convert bill to dict and format date
-    bill_dict = dict(bill)
-    if bill_dict['bill_date']:
-        # Convert YYYY-MM-DD to DD-MM-YYYY
-        date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
-        bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
-    
-    items = conn.execute('''
-        SELECT bi.*, i.product_id as inventory_product_id
-        FROM billing_items bi
-        LEFT JOIN inventory i ON bi.product_id = i.id
-        WHERE bi.bill_id = ?
-        ORDER BY bi.id
-    ''', (bill_dict['bill_id'],)).fetchall()
-    
-    # Get seller information
-    seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
-    
-    conn.close()
-    return render_template('billing/view.html', bill=bill_dict, items=items, seller=seller)
+    with db_connection() as conn:
+        bill = conn.execute('''
+            SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
+            FROM billing b
+            JOIN customers c ON b.customer_id = c.id
+            WHERE b.id = ?
+        ''', (id,)).fetchone()
+
+        if not bill:
+            flash('Bill not found!', 'error')
+            return redirect(url_for('billing.index'))
+
+        # Convert bill to dict and format date
+        bill_dict = dict(bill)
+        if bill_dict['bill_date']:
+            # Convert YYYY-MM-DD to DD-MM-YYYY
+            date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
+            bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+
+        items = conn.execute('''
+            SELECT bi.*, i.product_id as inventory_product_id
+            FROM billing_items bi
+            LEFT JOIN inventory i ON bi.product_id = i.id
+            WHERE bi.bill_id = ?
+            ORDER BY bi.id
+        ''', (bill_dict['bill_id'],)).fetchall()
+
+        # Get seller information
+        seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+
+        return render_template('billing/view.html', bill=bill_dict, items=items, seller=seller)
 
 @billing_bp.route('/print/<int:id>')
 def print_bill(id):
     """Print-friendly view of bill details"""
-    conn = get_db_connection()
-    bill = conn.execute('''
-        SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
-        FROM billing b
-        JOIN customers c ON b.customer_id = c.id
-        WHERE b.id = ?
-    ''', (id,)).fetchone()
-    
-    if not bill:
-        flash('Bill not found!', 'error')
-        conn.close()
-        return redirect(url_for('billing.index'))
-    
-    # Convert bill to dict and format date
-    bill_dict = dict(bill)
-    if bill_dict['bill_date']:
-        # Convert YYYY-MM-DD to DD-MM-YYYY
-        date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
-        bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
-    
-    items = conn.execute('''
-        SELECT bi.*, i.product_id as inventory_product_id
-        FROM billing_items bi
-        LEFT JOIN inventory i ON bi.product_id = i.id
-        WHERE bi.bill_id = ?
-        ORDER BY bi.id
-    ''', (bill_dict['bill_id'],)).fetchall()
-    
-    # Get seller information
-    seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
-    
-    conn.close()
-    return render_template('billing/print.html', bill=bill_dict, items=items, seller=seller)
+    with db_connection() as conn:
+        bill = conn.execute('''
+            SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
+            FROM billing b
+            JOIN customers c ON b.customer_id = c.id
+            WHERE b.id = ?
+        ''', (id,)).fetchone()
+
+        if not bill:
+            flash('Bill not found!', 'error')
+            return redirect(url_for('billing.index'))
+
+        # Convert bill to dict and format date
+        bill_dict = dict(bill)
+        if bill_dict['bill_date']:
+            # Convert YYYY-MM-DD to DD-MM-YYYY
+            date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
+            bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+
+        items = conn.execute('''
+            SELECT bi.*, i.product_id as inventory_product_id
+            FROM billing_items bi
+            LEFT JOIN inventory i ON bi.product_id = i.id
+            WHERE bi.bill_id = ?
+            ORDER BY bi.id
+        ''', (bill_dict['bill_id'],)).fetchall()
+
+        # Get seller information
+        seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+
+        return render_template('billing/print.html', bill=bill_dict, items=items, seller=seller)
 @billing_bp.route('/print-multiple')
 def print_multiple():
     """Print multiple bills in a single printable page"""
@@ -604,63 +579,57 @@ def print_multiple():
         flash('No valid bills selected!', 'error')
         return redirect(url_for('billing.index'))
     
-    conn = get_db_connection()
-    
-    # Get seller information (same for all bills)
-    seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
-    
-    # Collect all bills data
-    bills_data = []
-    
-    for bill_id in bill_ids:
-        # Get bill details
-        bill = conn.execute('''
-            SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
-            FROM billing b
-            JOIN customers c ON b.customer_id = c.id
-            WHERE b.id = ?
-        ''', (bill_id,)).fetchone()
-        
-        if not bill:
-            continue
-        
-        # Convert bill to dict and format date
-        bill_dict = dict(bill)
-        if bill_dict['bill_date']:
-            # Convert YYYY-MM-DD to DD-MM-YYYY
-            date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
-            bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
-        
-        # Get bill items
-        items = conn.execute('''
-            SELECT bi.*, i.product_id as inventory_product_id
-            FROM billing_items bi
-            LEFT JOIN inventory i ON bi.product_id = i.id
-            WHERE bi.bill_id = ?
-            ORDER BY bi.id
-        ''', (bill_id,)).fetchall()
-        
-        bills_data.append({
-            'bill': bill_dict,
-            'items': items
-        })
-    
-    conn.close()
-    
-    if not bills_data:
-        flash('No valid bills found for printing!', 'error')
-        return redirect(url_for('billing.index'))
-    
-    return render_template('billing/print_multiple.html', bills_data=bills_data, seller=seller)
+    with db_connection() as conn:
+        # Get seller information (same for all bills)
+        seller = conn.execute('SELECT * FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
+
+        # Collect all bills data
+        bills_data = []
+
+        for bill_id in bill_ids:
+            # Get bill details
+            bill = conn.execute('''
+                SELECT b.*, c.name as customer_name, c.email, c.mobile, c.address, c.gst_number
+                FROM billing b
+                JOIN customers c ON b.customer_id = c.id
+                WHERE b.id = ?
+            ''', (bill_id,)).fetchone()
+
+            if not bill:
+                continue
+
+            # Convert bill to dict and format date
+            bill_dict = dict(bill)
+            if bill_dict['bill_date']:
+                # Convert YYYY-MM-DD to DD-MM-YYYY
+                date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
+                bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+
+            # Get bill items
+            items = conn.execute('''
+                SELECT bi.*, i.product_id as inventory_product_id
+                FROM billing_items bi
+                LEFT JOIN inventory i ON bi.product_id = i.id
+                WHERE bi.bill_id = ?
+                ORDER BY bi.id
+            ''', (bill_id,)).fetchall()
+
+            bills_data.append({
+                'bill': bill_dict,
+                'items': items
+            })
+
+        if not bills_data:
+            flash('No valid bills found for printing!', 'error')
+            return redirect(url_for('billing.index'))
+
+        return render_template('billing/print_multiple.html', bills_data=bills_data, seller=seller)
 
 
 @billing_bp.route('/update/<int:bill_id>', methods=['GET', 'POST'])
 def update(bill_id):
     """Update an existing bill with multiple items"""
-    conn = get_db_connection()
-    
-    # Issue #15: Use try-finally to ensure connection is closed
-    try:
+    with db_connection() as conn:
         # Get seller information for state comparison
         seller = conn.execute('SELECT state FROM seller_info ORDER BY id DESC LIMIT 1').fetchone()
         seller_state = seller['state'] if seller and seller['state'] else ''
@@ -799,7 +768,8 @@ def update(bill_id):
                     return redirect(url_for('billing.update', bill_id=bill_id))
                 except Exception as e:
                     conn.rollback()
-                    flash(f'Error updating bill: {str(e)}', 'error')
+                    current_app.logger.exception('Error updating bill id=%s', bill_id)
+                    flash('Could not update the bill. Please try again.', 'error')
                     return redirect(url_for('billing.update', bill_id=bill_id))
             
             # Group items by product_id and sum quantities for duplicate products
@@ -906,66 +876,61 @@ def update(bill_id):
         return render_template('billing/update.html', bill=dict(bill), bill_items=bill_items,
                              customers=customers, inventory=inventory, seller_state=seller_state)
     
-    finally:
-        # Issue #15: Always close database connection
-        conn.close()
 
 @billing_bp.route('/active-bills-export')
 def active_bills_export():
     """Display all active bills with detailed item information for Excel export"""
-    conn = get_db_connection()
-    
-    # Get all active bills (not cancelled) with customer details and items
-    bills = conn.execute('''
-        SELECT
-            b.id,
-            b.bill_id,
-            c.name as customer_name,
-            c.gst_number as customer_gst,
-            b.bill_date,
-            b.subtotal,
-            b.gst_amount,
-            b.total_amount,
-            b.payment_status,
-            b.notes,
-            b.created_at,
-            c.customer_id,
-            c.vendor_code,
-            c.email,
-            c.mobile,
-            c.address,
-            c.state
-        FROM billing b
-        JOIN customers c ON b.customer_id = c.id
-        WHERE b.payment_status != 'Cancelled'
-        ORDER BY b.created_at DESC
-    ''').fetchall()
-    
-    # Get items for each bill
-    bills_with_items = []
-    for bill in bills:
-        items = conn.execute('''
+    with db_connection() as conn:
+        # Get all active bills (not cancelled) with customer details and items
+        bills = conn.execute('''
             SELECT
-                bi.product_name,
-                i.hsn_code,
-                bi.quantity,
-                bi.unit_price,
-                bi.gst_percentage,
-                bi.igst,
-                bi.sgst,
-                bi.cgst,
-                bi.total
-            FROM billing_items bi
-            LEFT JOIN inventory i ON bi.product_id = i.id
-            WHERE bi.bill_id = ?
-            ORDER BY bi.id
-        ''', (bill['bill_id'],)).fetchall()
-        
-        # Add all bills, even if they have no items
-        bills_with_items.append({
-            'bill': dict(bill),
-            'items': [dict(item) for item in items] if items else []
-        })
-    
-    conn.close()
-    return render_template('billing/active_bills_export.html', bills_with_items=bills_with_items)
+                b.id,
+                b.bill_id,
+                c.name as customer_name,
+                c.gst_number as customer_gst,
+                b.bill_date,
+                b.subtotal,
+                b.gst_amount,
+                b.total_amount,
+                b.payment_status,
+                b.notes,
+                b.created_at,
+                c.customer_id,
+                c.vendor_code,
+                c.email,
+                c.mobile,
+                c.address,
+                c.state
+            FROM billing b
+            JOIN customers c ON b.customer_id = c.id
+            WHERE b.payment_status != 'Cancelled'
+            ORDER BY b.created_at DESC
+        ''').fetchall()
+
+        # Get items for each bill
+        bills_with_items = []
+        for bill in bills:
+            items = conn.execute('''
+                SELECT
+                    bi.product_name,
+                    i.hsn_code,
+                    bi.quantity,
+                    bi.unit_price,
+                    bi.gst_percentage,
+                    bi.igst,
+                    bi.sgst,
+                    bi.cgst,
+                    bi.total
+                FROM billing_items bi
+                LEFT JOIN inventory i ON bi.product_id = i.id
+                WHERE bi.bill_id = ?
+                ORDER BY bi.id
+            ''', (bill['bill_id'],)).fetchall()
+
+            # Add all bills, even if they have no items
+            bills_with_items.append({
+                'bill': dict(bill),
+                'items': [dict(item) for item in items] if items else []
+            })
+
+        return render_template('billing/active_bills_export.html', bills_with_items=bills_with_items)

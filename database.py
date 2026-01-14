@@ -4,6 +4,7 @@ Handles all database connections and initialization
 """
 
 import sqlite3
+from contextlib import contextmanager
 
 # Database configuration
 DATABASE = 'business.db'
@@ -13,6 +14,16 @@ def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+@contextmanager
+def db_connection():
+    """Context manager for DB connections (always closes the connection)."""
+    conn = get_db_connection()
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 def init_db():
     """Initialize the database with all required tables"""
