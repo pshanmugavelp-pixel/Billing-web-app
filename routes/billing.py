@@ -681,176 +681,157 @@ def update(bill_id):
             
             # If not confirmed, show preview of inventory changes
             if confirm_update != 'yes':
+                # Build old items dictionary for comparison
+                old_products = {}
+                for old_item in old_items:
+                    old_products[old_item['product_id']] = {
+                        'product_name': old_item['product_name'],
+                        'quantity': old_item['quantity']
+                    }
+                
                 # Calculate inventory changes
                 inventory_changes = []
+                for item in items:
+                    product_id = item['product_id']
+                    new_qty = item['quantity']
+                    old_qty = old_products.get(product_id, {}).get('quantity', 0)
+                    
+                    # Get current inventory
+                    inv = conn.execute('SELECT quantity FROM inventory WHERE id = ?', (product_id,)).fetchone()
+                    current_qty = inv['quantity'] if inv else 0
+                    
+                    # Net change: old qty is restored (+), new qty is deducted (-)
+                    net_change = old_qty - new_qty
+                    new_inventory = current_qty + net_change
+                    
+                    inventory_changes.append({
+                        'product_name': item['product_name'],
+                        'current_qty': current_qty,
+                        'old_bill_qty': old_qty,
+                        'new_bill_qty': new_qty,
+                        'net_change': net_change,
+                        'new_inventory': new_inventory
+                    })
+                    
+                    # Remove from old_products so we can track removals
+                    if product_id in old_products:
+                        del old_products[product_id]
                 
-                # Track old items (will be restored)
-                old_products = {}
-                # User confirmed - proceed with update (multi-step write must be atomic)
-                try:
-                    # Restore old inventory quantities (so stock check is against restored inventory)
-                    for old_item in old_items:
-                        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                                    (old_item['quantity'], old_item['product_id']))
+                # Add removed items (items that were in old bill but not in new)
+                for product_id, old_data in old_products.items():
+                    inv = conn.execute('SELECT quantity FROM inventory WHERE id = ?', (product_id,)).fetchone()
+                    current_qty = inv['quantity'] if inv else 0
+                    
+                    inventory_changes.append({
+                        'product_name': old_data['product_name'],
+                        'current_qty': current_qty,
+                        'old_bill_qty': old_data['quantity'],
+                        'new_bill_qty': 0,
+                        'net_change': old_data['quantity'],
+                        'new_inventory': current_qty + old_data['quantity']
+                    })
+                
+                # Show confirmation page
+                bill = conn.execute('SELECT * FROM billing WHERE id = ?', (bill_id,)).fetchone()
+                form_data = {
+                    'bill_id': new_bill_id,
+                    'customer_id': customer_id,
+                    'bill_date': bill_date,
+                    'payment_status': payment_status,
+                    'notes': notes,
+                    'items_data': items_json
+                }
+                
+                return render_template('billing/update_confirm.html',
+                                     bill=bill,
+                                     form_data=form_data,
+                                     inventory_changes=inventory_changes)
+            
+            # User confirmed - proceed with update (multi-step write must be atomic)
+            try:
+                # Restore old inventory quantities (so stock check is against restored inventory)
+                for old_item in old_items:
+                    conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                                (old_item['quantity'], old_item['product_id']))
 
-                    # Group items by product_id and sum quantities for duplicate products
-                    product_quantities = {}
-                    for item in items:
-                        product_id = item['product_id']
-                        if product_id in product_quantities:
-                            product_quantities[product_id]['total_quantity'] += item['quantity']
-                        else:
-                            product_quantities[product_id] = {
-                                'total_quantity': item['quantity'],
-                                'product_name': item['product_name']
-                            }
-
-                    # Check inventory for all new items (considering total quantities)
-                    for product_id, data in product_quantities.items():
-                        product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
-                                             (product_id,)).fetchone()
-                        if product:
-                            if product['quantity'] < data['total_quantity']:
-                                raise ValueError(
-                                    f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). '
-                                    f'Requested: {data["total_quantity"]}, Available: {product["quantity"]}'
-                                )
-                        else:
-                            raise ValueError(f'Product {data["product_name"]} not found in inventory!')
-
-                    # Calculate totals
-                    subtotal = sum(float(item['subtotal']) for item in items)
-                    gst_amount = sum(float(item['gst_amount']) for item in items)
-                    total_before_round = sum(float(item['total']) for item in items)
-
-                    # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
-                    import math
-                    decimal_part = total_before_round - math.floor(total_before_round)
-                    if decimal_part >= 0.55:
-                        rounded_total = math.ceil(total_before_round)
-                        round_off = rounded_total - total_before_round
+                # Group items by product_id and sum quantities for duplicate products
+                product_quantities = {}
+                for item in items:
+                    product_id = item['product_id']
+                    if product_id in product_quantities:
+                        product_quantities[product_id]['total_quantity'] += item['quantity']
                     else:
-                        rounded_total = math.floor(total_before_round)
-                        round_off = rounded_total - total_before_round
+                        product_quantities[product_id] = {
+                            'total_quantity': item['quantity'],
+                            'product_name': item['product_name']
+                        }
 
-                    total_amount = rounded_total
+                # Check inventory for all new items (considering total quantities)
+                for product_id, data in product_quantities.items():
+                    product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
+                                         (product_id,)).fetchone()
+                    if product:
+                        if product['quantity'] < data['total_quantity']:
+                            raise ValueError(
+                                f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). '
+                                f'Requested: {data["total_quantity"]}, Available: {product["quantity"]}'
+                            )
+                    else:
+                        raise ValueError(f'Product {data["product_name"]} not found in inventory!')
 
-                    # Update bill header
-                    conn.execute('''UPDATE billing SET bill_id = ?, customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
-                                   round_off = ?, total_amount = ?, payment_status = ?, notes = ?
-                                   WHERE id = ?''',
-                                (new_bill_id, customer_id, bill_date, subtotal, gst_amount, round_off, total_amount,
-                                 payment_status, notes, bill_id))
+                # Calculate totals
+                subtotal = sum(float(item['subtotal']) for item in items)
+                gst_amount = sum(float(item['gst_amount']) for item in items)
+                total_before_round = sum(float(item['total']) for item in items)
 
-                    # Delete all old billing items and re-insert new ones
-                    conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
-
-                    # Insert all new bill items, then deduct inventory
-                    for item in items:
-                        conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
-                                       unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
-                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                                    (new_bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
-                                     item['quantity'], item['unit_price'], item['gst_percentage'],
-                                     item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
-                                     item.get('igst', 0), item['total']))
-
-                        conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-                                    (item['quantity'], item['product_id']))
-
-                    conn.commit()
-
-                    flash(f'Bill {new_bill_id} updated successfully with {len(items)} item(s)! Inventory updated.', 'success')
-                    return redirect(url_for('billing.index'))
-                except ValueError as e:
-                    conn.rollback()
-                    flash(str(e), 'error')
-                    return redirect(url_for('billing.update', bill_id=bill_id))
-                except Exception as e:
-                    conn.rollback()
-                    current_app.logger.exception('Error updating bill id=%s', bill_id)
-                    flash('Could not update the bill. Please try again.', 'error')
-                    return redirect(url_for('billing.update', bill_id=bill_id))
-            
-            # Group items by product_id and sum quantities for duplicate products
-            product_quantities = {}
-            for item in items:
-                product_id = item['product_id']
-                if product_id in product_quantities:
-                    product_quantities[product_id]['total_quantity'] += item['quantity']
+                # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
+                import math
+                decimal_part = total_before_round - math.floor(total_before_round)
+                if decimal_part >= 0.55:
+                    rounded_total = math.ceil(total_before_round)
+                    round_off = rounded_total - total_before_round
                 else:
-                    product_quantities[product_id] = {
-                        'total_quantity': item['quantity'],
-                        'product_name': item['product_name']
-                    }
-            
-            # Check inventory for all new items (considering total quantities)
-            for product_id, data in product_quantities.items():
-                product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
-                                     (product_id,)).fetchone()
-                if product:
-                    if product['quantity'] < data['total_quantity']:
-                        # Restore the old quantities back since we're not proceeding
-                        for old_item in old_items:
-                            conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-                                        (old_item['quantity'], old_item['product_id']))
-                        conn.commit()
-                        flash(f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). Requested: {data["total_quantity"]}, Available: {product["quantity"]}', 'error')
-                        return redirect(url_for('billing.update', bill_id=bill_id))
-                else:
-                    # Restore the old quantities back since we're not proceeding
-                    for old_item in old_items:
-                        conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-                                    (old_item['quantity'], old_item['product_id']))
-                    conn.commit()
-                    flash(f'Product {data["product_name"]} not found in inventory!', 'error')
-                    return redirect(url_for('billing.update', bill_id=bill_id))
-            
-            # Calculate totals
-            subtotal = sum(float(item['subtotal']) for item in items)
-            gst_amount = sum(float(item['gst_amount']) for item in items)
-            total_before_round = sum(float(item['total']) for item in items)
-            
-            # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
-            import math
-            decimal_part = total_before_round - math.floor(total_before_round)
-            if decimal_part >= 0.55:
-                rounded_total = math.ceil(total_before_round)
-                round_off = rounded_total - total_before_round
-            else:
-                rounded_total = math.floor(total_before_round)
-                round_off = rounded_total - total_before_round
-            
-            total_amount = rounded_total
-            
-            # Update bill header
-            conn.execute('''UPDATE billing SET bill_id = ?, customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
-                           round_off = ?, total_amount = ?, payment_status = ?, notes = ?
-                           WHERE id = ?''',
-                        (new_bill_id, customer_id, bill_date, subtotal, gst_amount, round_off, total_amount,
-                         payment_status, notes, bill_id))
-            
-            # Delete all old billing items and re-insert new ones
-            conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
-            
-            # Insert all new bill items
-            for item in items:
-                conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
-                               unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (new_bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
-                             item['quantity'], item['unit_price'], item['gst_percentage'],
-                             item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
-                             item.get('igst', 0), item['total']))
-                
-                # Reduce inventory
-                conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-                            (item['quantity'], item['product_id']))
-            
-            conn.commit()
-            
-            flash(f'Bill {new_bill_id} updated successfully with {len(items)} item(s)! Inventory updated.', 'success')
-            return redirect(url_for('billing.index'))
+                    rounded_total = math.floor(total_before_round)
+                    round_off = rounded_total - total_before_round
+
+                total_amount = rounded_total
+
+                # Update bill header
+                conn.execute('''UPDATE billing SET bill_id = ?, customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
+                               round_off = ?, total_amount = ?, payment_status = ?, notes = ?
+                               WHERE id = ?''',
+                            (new_bill_id, customer_id, bill_date, subtotal, gst_amount, round_off, total_amount,
+                             payment_status, notes, bill_id))
+
+                # Delete all old billing items and re-insert new ones
+                conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
+
+                # Insert all new bill items, then deduct inventory
+                for item in items:
+                    conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
+                                   unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                (new_bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
+                                 item['quantity'], item['unit_price'], item['gst_percentage'],
+                                 item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                                 item.get('igst', 0), item['total']))
+
+                    conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
+                                (item['quantity'], item['product_id']))
+
+                conn.commit()
+
+                flash(f'Bill {new_bill_id} updated successfully with {len(items)} item(s)! Inventory updated.', 'success')
+                return redirect(url_for('billing.index'))
+            except ValueError as e:
+                conn.rollback()
+                flash(str(e), 'error')
+                return redirect(url_for('billing.update', bill_id=bill_id))
+            except Exception as e:
+                conn.rollback()
+                current_app.logger.exception('Error updating bill id=%s', bill_id)
+                flash('Could not update the bill. Please try again.', 'error')
+                return redirect(url_for('billing.update', bill_id=bill_id))
         
         # GET request - load bill for editing
         bill = conn.execute('SELECT * FROM billing WHERE id = ?', (bill_id,)).fetchone()

@@ -221,6 +221,27 @@
             margin-bottom: 10px;
         }
         
+        .btn-remove-item {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .btn-remove-item:hover {
+            background: #c0392b;
+        }
+        
+        .btn-remove-item:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
         .item-details {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -552,6 +573,12 @@
                 <div class="item-row">
                     <div class="item-header">
                         <strong>${item.product_name}</strong>
+                        <button type="button" 
+                                class="btn-danger" 
+                                onclick="removeItem(${index})"
+                                ${billItems.length <= 1 ? 'disabled title="Cannot remove the last item"' : ''}>
+                            Remove
+                        </button>
                     </div>
                     <div class="item-details">
                         ${item.hsn_code ? `<div class="item-detail">
@@ -563,7 +590,7 @@
                             <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
                                 <input type="number"
                                        value="${item.quantity}"
-                                       min="0"
+                                       min="1"
                                        onchange="updateQuantity(${index}, this.value)"
                                        style="width: 80px; padding: 8px; font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #3498db; border-radius: 5px;">
                                 ${changeIndicator}
@@ -595,7 +622,14 @@
         }
         
         function updateQuantity(index, newValue) {
-            const quantity = parseInt(newValue) || 0;
+            const quantity = parseInt(newValue) || 1;
+            
+            if (quantity < 1) {
+                alert('Quantity must be at least 1. To remove an item, use the Remove button.');
+                billItems[index].quantity = 1;
+                renderItems();
+                return;
+            }
             
             if (quantity < 0) {
                 alert('Quantity cannot be negative!');
@@ -604,6 +638,11 @@
             }
             
             if (quantity === 0) {
+                if (billItems.length <= 1) {
+                    alert('Cannot remove the last item. A bill must have at least one item.');
+                    renderItems();
+                    return;
+                }
                 if (confirm('Setting quantity to 0 will remove this item from the bill. Continue?')) {
                     billItems.splice(index, 1);
                     renderItems();
@@ -639,6 +678,20 @@
             recalculateItem(index);
             renderItems();
             updateTotals();
+        }
+        
+        function removeItem(index) {
+            if (billItems.length <= 1) {
+                alert('Cannot remove the last item. A bill must have at least one item.');
+                return;
+            }
+            
+            const item = billItems[index];
+            if (confirm(`Remove "${item.product_name}" from this bill?`)) {
+                billItems.splice(index, 1);
+                renderItems();
+                updateTotals();
+            }
         }
         
         function recalculateItem(index) {
@@ -709,7 +762,7 @@
             
             // Disable submit button
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Updating...';
+            submitBtn.textContent = 'Processing...';
             submitBtn.style.opacity = '0.6';
             
             // Form will submit and show confirmation page on server side
