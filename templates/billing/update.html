@@ -409,6 +409,25 @@
         const sellerState = '{{ seller_state }}';
         let billItems = [];
         let customerState = '';
+        let isLoading = false;
+        
+        // Function to normalize state names (Issue #10 - moved to global scope)
+        function normalizeStateName(state) {
+            if (!state) return '';
+            const normalized = state.trim().toLowerCase().replace(/\s+/g, '');
+            
+            // Handle Pondicherry/Puducherry variations
+            if (normalized === 'pondicherry' || normalized === 'puducherry') {
+                return 'puducherry';
+            }
+            
+            // Handle Tamil Nadu variations (with or without space)
+            if (normalized === 'tamilnadu' || normalized === 'tamil nadu') {
+                return 'tamilnadu';
+            }
+            
+            return normalized;
+        }
         
         // Load existing customer data
         window.addEventListener('DOMContentLoaded', function() {
@@ -470,8 +489,17 @@
         });
         
         function selectCustomer(customerId) {
+            // Issue #13: Prevent race conditions with loading state
+            if (isLoading) return;
+            isLoading = true;
+            
             fetch(`/billing/api/customer/${customerId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch customer data');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     document.getElementById('customer_id').value = data.id;
                     document.getElementById('customer_id_display').value = data.customer_id || '';
@@ -486,6 +514,14 @@
                     billItems.forEach((item, index) => recalculateItem(index));
                     renderItems();
                     updateTotals();
+                })
+                .catch(error => {
+                    // Issue #5: Add error handling
+                    console.error('Error fetching customer:', error);
+                    alert('Failed to load customer data. Please try again.');
+                })
+                .finally(() => {
+                    isLoading = false;
                 });
         }
         
@@ -607,24 +643,6 @@
             // Calculate CGST/SGST or IGST based on customer state
             let cgst = 0, sgst = 0, igst = 0;
             
-            // Function to normalize state names
-            function normalizeStateName(state) {
-                if (!state) return '';
-                const normalized = state.trim().toLowerCase().replace(/\s+/g, '');
-                
-                // Handle Pondicherry/Puducherry variations
-                if (normalized === 'pondicherry' || normalized === 'puducherry') {
-                    return 'puducherry';
-                }
-                
-                // Handle Tamil Nadu variations (with or without space)
-                if (normalized === 'tamilnadu' || normalized === 'tamil nadu') {
-                    return 'tamilnadu';
-                }
-                
-                return normalized;
-            }
-            
             const normalizedCustomerState = normalizeStateName(customerState);
             
             // GST calculation based on customer state only
@@ -646,11 +664,23 @@
         function updateTotals() {
             const subtotal = billItems.reduce((sum, item) => sum + item.subtotal, 0);
             const gstAmount = billItems.reduce((sum, item) => sum + item.gst_amount, 0);
-            const total = billItems.reduce((sum, item) => sum + item.total, 0);
+            const totalBeforeRound = billItems.reduce((sum, item) => sum + item.total, 0);
+            
+            // Issue #4: Apply round-off logic to match backend
+            const decimalPart = totalBeforeRound - Math.floor(totalBeforeRound);
+            let roundedTotal, roundOff;
+            
+            if (decimalPart >= 0.55) {
+                roundedTotal = Math.ceil(totalBeforeRound);
+                roundOff = roundedTotal - totalBeforeRound;
+            } else {
+                roundedTotal = Math.floor(totalBeforeRound);
+                roundOff = roundedTotal - totalBeforeRound;
+            }
             
             document.getElementById('display_subtotal').textContent = `₹${subtotal.toFixed(2)}`;
             document.getElementById('display_gst').textContent = `₹${gstAmount.toFixed(2)}`;
-            document.getElementById('display_total').textContent = `₹${total.toFixed(2)}`;
+            document.getElementById('display_total').textContent = `₹${roundedTotal.toFixed(2)}`;
         }
         
         // Form submission
@@ -661,8 +691,21 @@
                 return;
             }
             
+            // Issue #12: Prevent multiple submissions
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn.disabled) {
+                e.preventDefault();
+                return;
+            }
+            
             // Set items data as JSON before submitting
             document.getElementById('items_data').value = JSON.stringify(billItems);
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+            submitBtn.style.opacity = '0.6';
+            
             // Form will submit and show confirmation page on server side
         });
         
