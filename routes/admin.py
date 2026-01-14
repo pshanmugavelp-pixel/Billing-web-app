@@ -50,31 +50,36 @@ def update_seller_info():
     branch = request.form['branch']
     
     conn = get_db_connection()
-    
-    # Check if seller info exists
-    existing = conn.execute('SELECT id FROM seller_info LIMIT 1').fetchone()
-    
-    if existing:
-        # Update existing record
-        conn.execute('''UPDATE seller_info SET seller_name = ?, address = ?, email = ?, mobile = ?,
-                        gst_number = ?, account_name = ?, account_number = ?, ifsc_code = ?,
-                        account_type = ?, branch = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = ?''',
-                    (seller_name, address, email, mobile, gst_number, account_name, account_number,
-                     ifsc_code, account_type, branch, existing['id']))
-    else:
-        # Insert new record
-        conn.execute('''INSERT INTO seller_info (seller_name, address, email, mobile, gst_number,
-                        account_name, account_number, ifsc_code, account_type, branch)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (seller_name, address, email, mobile, gst_number, account_name, account_number,
-                     ifsc_code, account_type, branch))
-    
-    conn.commit()
-    conn.close()
-    
-    flash('Seller information updated successfully!', 'success')
-    return redirect(url_for('admin.seller_info'))
+
+    try:
+        # Check if seller info exists
+        existing = conn.execute('SELECT id FROM seller_info LIMIT 1').fetchone()
+
+        if existing:
+            # Update existing record
+            conn.execute('''UPDATE seller_info SET seller_name = ?, address = ?, email = ?, mobile = ?,
+                            gst_number = ?, account_name = ?, account_number = ?, ifsc_code = ?,
+                            account_type = ?, branch = ?, updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ?''',
+                        (seller_name, address, email, mobile, gst_number, account_name, account_number,
+                         ifsc_code, account_type, branch, existing['id']))
+        else:
+            # Insert new record
+            conn.execute('''INSERT INTO seller_info (seller_name, address, email, mobile, gst_number,
+                            account_name, account_number, ifsc_code, account_type, branch)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (seller_name, address, email, mobile, gst_number, account_name, account_number,
+                         ifsc_code, account_type, branch))
+
+        conn.commit()
+        flash('Seller information updated successfully!', 'success')
+        return redirect(url_for('admin.seller_info'))
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error updating seller information: {str(e)}', 'error')
+        return redirect(url_for('admin.seller_info'))
+    finally:
+        conn.close()
 
 @admin_bp.route('/view-table/<table_name>')
 def view_table(table_name):
@@ -160,7 +165,7 @@ def delete_rows(table_name):
         return redirect(url_for('admin.view_table', table_name=table_name))
     
     conn = get_db_connection()
-    
+
     try:
         # Get primary key column name
         schema = conn.execute(f'PRAGMA table_info({table_name})').fetchall()
@@ -172,19 +177,18 @@ def delete_rows(table_name):
         
         if not pk_column:
             flash('Table has no primary key!', 'error')
-            conn.close()
             return redirect(url_for('admin.view_table', table_name=table_name))
         
         # Delete rows
         placeholders = ','.join('?' * len(row_ids))
         conn.execute(f'DELETE FROM {table_name} WHERE {pk_column} IN ({placeholders})', row_ids)
         conn.commit()
-        conn.close()
-        
         flash(f'{len(row_ids)} row(s) deleted successfully from {table_name}!', 'success')
     except Exception as e:
-        conn.close()
+        conn.rollback()
         flash(f'Error deleting rows: {str(e)}', 'error')
+    finally:
+        conn.close()
     
     return redirect(url_for('admin.view_table', table_name=table_name))
 
@@ -317,6 +321,7 @@ def reset_table(table_name):
         conn.commit()
         flash(f'Table "{table_name}" has been reset successfully!', 'success')
     except Exception as e:
+        conn.rollback()
         flash(f'Error resetting table: {str(e)}', 'error')
     finally:
         conn.close()
@@ -327,7 +332,7 @@ def reset_table(table_name):
 def reset_all():
     """Reset all tables"""
     conn = get_db_connection()
-    
+
     try:
         # Drop all tables
         conn.execute('DROP TABLE IF EXISTS billing_items')
@@ -335,14 +340,15 @@ def reset_all():
         conn.execute('DROP TABLE IF EXISTS inventory')
         conn.execute('DROP TABLE IF EXISTS customers')
         conn.commit()
-        
-        # Reinitialize database
-        conn.close()
+
+        # Reinitialize database (uses its own connection)
         init_db()
-        
+
         flash('All tables have been reset successfully!', 'success')
     except Exception as e:
+        conn.rollback()
         flash(f'Error resetting tables: {str(e)}', 'error')
+    finally:
         conn.close()
     
     return redirect(url_for('admin.index'))

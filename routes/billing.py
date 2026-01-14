@@ -235,35 +235,50 @@ def create():
         
         total_amount = rounded_total
         
-        # Insert bill header
-        cursor = conn.execute('''INSERT INTO billing (bill_id, customer_id, bill_date, subtotal, gst_amount,
-                                round_off, total_amount, payment_status, notes)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (bill_id, customer_id, bill_date, subtotal, gst_amount, round_off,
-                             total_amount, payment_status, notes))
-        
-        # Get the auto-generated numeric ID for the bill
-        new_bill_numeric_id = cursor.lastrowid
-        
-        # Insert bill items and update inventory (use TEXT bill_id, not numeric ID)
-        for item in items:
-            conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
-                           unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
-                         item['quantity'], item['unit_price'], item['gst_percentage'],
-                         item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
-                         item.get('igst', 0), item['total']))
-            
-            # Reduce inventory
-            conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
-                        (item['quantity'], item['product_id']))
-        
-        conn.commit()
-        conn.close()
-        
-        flash(f'Bill {bill_id} created successfully with {len(items)} item(s)! Inventory updated.', 'success')
-        return redirect(url_for('billing.index'))
+        # Multi-step write operations should be atomic
+        try:
+            # Insert bill header
+            cursor = conn.execute('''INSERT INTO billing (bill_id, customer_id, bill_date, subtotal, gst_amount,
+                                    round_off, total_amount, payment_status, notes)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                (bill_id, customer_id, bill_date, subtotal, gst_amount, round_off,
+                                 total_amount, payment_status, notes))
+
+            # Get the auto-generated numeric ID for the bill (kept for backward compatibility)
+            new_bill_numeric_id = cursor.lastrowid
+
+            # Insert bill items and update inventory (use TEXT bill_id, not numeric ID)
+            for item in items:
+                conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
+                               unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
+                             item['quantity'], item['unit_price'], item['gst_percentage'],
+                             item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                             item.get('igst', 0), item['total']))
+
+                # Reduce inventory
+                conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
+                            (item['quantity'], item['product_id']))
+
+            conn.commit()
+
+            flash(f'Bill {bill_id} created successfully with {len(items)} item(s)! Inventory updated.', 'success')
+            return redirect(url_for('billing.index'))
+        except Exception as e:
+            conn.rollback()
+            flash(f'Error creating bill: {str(e)}', 'error')
+            form_data = {
+                'bill_id': bill_id,
+                'customer_id': customer_id,
+                'bill_date': bill_date,
+                'payment_status': payment_status,
+                'notes': notes,
+                'items_data': items_json
+            }
+            return render_template('billing/create.html', customers=customers, inventory=inventory, form_data=form_data)
+        finally:
+            conn.close()
     
     # GET request - show empty form
     conn.close()
@@ -327,19 +342,25 @@ def delete(id):
     # Get bill items to restore inventory
     items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?', (bill_id_text,)).fetchall()
     
-    for item in items:
-        # Restore inventory quantity
-        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                    (item['quantity'], item['product_id']))
-    
-    # Delete bill items and bill
-    conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id_text,))
-    conn.execute('DELETE FROM billing WHERE id = ?', (id,))
-    conn.commit()
-    conn.close()
-    
-    flash('Bill deleted successfully! Inventory restored.', 'success')
-    return redirect(url_for('billing.index'))
+    try:
+        for item in items:
+            # Restore inventory quantity
+            conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                        (item['quantity'], item['product_id']))
+
+        # Delete bill items and bill
+        conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (bill_id_text,))
+        conn.execute('DELETE FROM billing WHERE id = ?', (id,))
+        conn.commit()
+
+        flash('Bill deleted successfully! Inventory restored.', 'success')
+        return redirect(url_for('billing.index'))
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error deleting bill: {str(e)}', 'error')
+        return redirect(url_for('billing.index'))
+    finally:
+        conn.close()
 
 @billing_bp.route('/cancel-bills-confirm', methods=['POST'])
 def cancel_bills_confirm():
@@ -415,31 +436,38 @@ def cancel_bills():
         return redirect(url_for('billing.index'))
     
     conn = get_db_connection()
-    
-    # Restore inventory for all bills being cancelled
-    for bill_internal_id in bill_internal_ids:
-        # Get bill_id text from billing table
-        bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_internal_id,)).fetchone()
-        if bill:
-            bill_id_text = bill['bill_id']
-            
-            # Get bill items using TEXT bill_id
-            items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
-                               (bill_id_text,)).fetchall()
-            
-            for item in items:
-                conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                            (item['quantity'], item['product_id']))
-    
-    # Update bills to Cancelled status
-    placeholders = ','.join('?' * len(bill_internal_ids))
-    conn.execute(f'UPDATE billing SET payment_status = ? WHERE id IN ({placeholders})',
-                ['Cancelled'] + bill_internal_ids)
-    conn.commit()
-    conn.close()
-    
-    flash(f'{len(bill_internal_ids)} bill(s) cancelled successfully! Inventory restored.', 'success')
-    return redirect(url_for('billing.index'))
+
+    try:
+        # Restore inventory for all bills being cancelled
+        for bill_internal_id in bill_internal_ids:
+            # Get bill_id text from billing table
+            bill = conn.execute('SELECT bill_id FROM billing WHERE id = ?', (bill_internal_id,)).fetchone()
+            if bill:
+                bill_id_text = bill['bill_id']
+
+                # Get bill items using TEXT bill_id
+                items = conn.execute('SELECT product_id, quantity FROM billing_items WHERE bill_id = ?',
+                                   (bill_id_text,)).fetchall()
+
+                for item in items:
+                    conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                                (item['quantity'], item['product_id']))
+
+        # Update bills to Cancelled status
+        placeholders = ','.join('?' * len(bill_internal_ids))
+        conn.execute(f'UPDATE billing SET payment_status = ? WHERE id IN ({placeholders})',
+                    ['Cancelled'] + bill_internal_ids)
+
+        conn.commit()
+
+        flash(f'{len(bill_internal_ids)} bill(s) cancelled successfully! Inventory restored.', 'success')
+        return redirect(url_for('billing.index'))
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error cancelling bills: {str(e)}', 'error')
+        return redirect(url_for('billing.index'))
+    finally:
+        conn.close()
 
 @billing_bp.route('/delete-multiple', methods=['POST'])
 def delete_multiple():
@@ -451,30 +479,37 @@ def delete_multiple():
         return redirect(url_for('billing.index'))
     
     conn = get_db_connection()
-    
-    # Get bill_id texts for the selected bills
-    placeholders = ','.join('?' * len(bill_internal_ids))
-    bills = conn.execute(f'SELECT bill_id FROM billing WHERE id IN ({placeholders})', bill_internal_ids).fetchall()
-    bill_id_texts = [bill['bill_id'] for bill in bills]
-    
-    # Restore inventory for all bills being deleted
-    placeholders_text = ','.join('?' * len(bill_id_texts))
-    items = conn.execute(f'SELECT product_id, quantity FROM billing_items WHERE bill_id IN ({placeholders_text})',
-                        bill_id_texts).fetchall()
-    
-    for item in items:
-        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                    (item['quantity'], item['product_id']))
-    
-    # Delete bill items and bills
-    conn.execute(f'DELETE FROM billing_items WHERE bill_id IN ({placeholders_text})', bill_id_texts)
-    placeholders_int = ','.join('?' * len(bill_internal_ids))
-    conn.execute(f'DELETE FROM billing WHERE id IN ({placeholders_int})', bill_internal_ids)
-    conn.commit()
-    conn.close()
-    
-    flash(f'{len(bill_internal_ids)} bill(s) deleted successfully! Inventory restored.', 'success')
-    return redirect(url_for('billing.index'))
+
+    try:
+        # Get bill_id texts for the selected bills
+        placeholders = ','.join('?' * len(bill_internal_ids))
+        bills = conn.execute(f'SELECT bill_id FROM billing WHERE id IN ({placeholders})', bill_internal_ids).fetchall()
+        bill_id_texts = [bill['bill_id'] for bill in bills]
+
+        # Restore inventory for all bills being deleted
+        placeholders_text = ','.join('?' * len(bill_id_texts))
+        items = conn.execute(f'SELECT product_id, quantity FROM billing_items WHERE bill_id IN ({placeholders_text})',
+                            bill_id_texts).fetchall()
+
+        for item in items:
+            conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                        (item['quantity'], item['product_id']))
+
+        # Delete bill items and bills
+        conn.execute(f'DELETE FROM billing_items WHERE bill_id IN ({placeholders_text})', bill_id_texts)
+        placeholders_int = ','.join('?' * len(bill_internal_ids))
+        conn.execute(f'DELETE FROM billing WHERE id IN ({placeholders_int})', bill_internal_ids)
+
+        conn.commit()
+
+        flash(f'{len(bill_internal_ids)} bill(s) deleted successfully! Inventory restored.', 'success')
+        return redirect(url_for('billing.index'))
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error deleting bills: {str(e)}', 'error')
+        return redirect(url_for('billing.index'))
+    finally:
+        conn.close()
 
 @billing_bp.route('/view/<int:id>')
 def view(id):
@@ -682,93 +717,90 @@ def update(bill_id):
                 
                 # Track old items (will be restored)
                 old_products = {}
-                for old_item in old_items:
-                    pid = old_item['product_id']
-                    if pid in old_products:
-                        old_products[pid]['quantity'] += old_item['quantity']
+                # User confirmed - proceed with update (multi-step write must be atomic)
+                try:
+                    # Restore old inventory quantities (so stock check is against restored inventory)
+                    for old_item in old_items:
+                        conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
+                                    (old_item['quantity'], old_item['product_id']))
+
+                    # Group items by product_id and sum quantities for duplicate products
+                    product_quantities = {}
+                    for item in items:
+                        product_id = item['product_id']
+                        if product_id in product_quantities:
+                            product_quantities[product_id]['total_quantity'] += item['quantity']
+                        else:
+                            product_quantities[product_id] = {
+                                'total_quantity': item['quantity'],
+                                'product_name': item['product_name']
+                            }
+
+                    # Check inventory for all new items (considering total quantities)
+                    for product_id, data in product_quantities.items():
+                        product = conn.execute('SELECT product_id, product_name, quantity FROM inventory WHERE id = ?',
+                                             (product_id,)).fetchone()
+                        if product:
+                            if product['quantity'] < data['total_quantity']:
+                                raise ValueError(
+                                    f'Insufficient quantity for {product["product_name"]} (Product ID: {product["product_id"]}). '
+                                    f'Requested: {data["total_quantity"]}, Available: {product["quantity"]}'
+                                )
+                        else:
+                            raise ValueError(f'Product {data["product_name"]} not found in inventory!')
+
+                    # Calculate totals
+                    subtotal = sum(float(item['subtotal']) for item in items)
+                    gst_amount = sum(float(item['gst_amount']) for item in items)
+                    total_before_round = sum(float(item['total']) for item in items)
+
+                    # Calculate round-off: if decimal >= 0.55, round up (+1), else round down (-1)
+                    import math
+                    decimal_part = total_before_round - math.floor(total_before_round)
+                    if decimal_part >= 0.55:
+                        rounded_total = math.ceil(total_before_round)
+                        round_off = rounded_total - total_before_round
                     else:
-                        old_products[pid] = {
-                            'product_name': old_item['product_name'],
-                            'quantity': old_item['quantity']
-                        }
-                
-                # Track new items (will be deducted)
-                new_products = {}
-                for item in items:
-                    pid = item['product_id']
-                    if pid in new_products:
-                        new_products[pid]['quantity'] += item['quantity']
-                    else:
-                        new_products[pid] = {
-                            'product_name': item['product_name'],
-                            'quantity': item['quantity']
-                        }
-                
-                # Calculate net changes
-                all_product_ids = set(old_products.keys()) | set(new_products.keys())
-                for pid in all_product_ids:
-                    old_qty = old_products.get(pid, {}).get('quantity', 0)
-                    new_qty = new_products.get(pid, {}).get('quantity', 0)
-                    product_name = old_products.get(pid, {}).get('product_name') or new_products.get(pid, {}).get('product_name')
-                    
-                    # Get current inventory
-                    current_inv = conn.execute('SELECT quantity FROM inventory WHERE id = ?', (pid,)).fetchone()
-                    current_qty = current_inv['quantity'] if current_inv else 0
-                    
-                    net_change = old_qty - new_qty  # Positive means inventory increases, negative means decreases
-                    new_inventory = current_qty + net_change
-                    
-                    if net_change != 0:
-                        inventory_changes.append({
-                            'product_id': pid,
-                            'product_name': product_name,
-                            'current_qty': current_qty,
-                            'old_bill_qty': old_qty,
-                            'new_bill_qty': new_qty,
-                            'net_change': net_change,
-                            'new_inventory': new_inventory
-                        })
-                
-                # Check if any new inventory would be negative
-                insufficient_stock = []
-                for change in inventory_changes:
-                    if change['new_inventory'] < 0:
-                        insufficient_stock.append(change)
-                
-                if insufficient_stock:
-                    flash('Cannot update bill: Insufficient inventory for the following products:', 'error')
-                    for item in insufficient_stock:
-                        flash(f"• {item['product_name']}: Current stock {item['current_qty']}, would become {item['new_inventory']} after update", 'error')
+                        rounded_total = math.floor(total_before_round)
+                        round_off = rounded_total - total_before_round
+
+                    total_amount = rounded_total
+
+                    # Update bill header
+                    conn.execute('''UPDATE billing SET bill_id = ?, customer_id = ?, bill_date = ?, subtotal = ?, gst_amount = ?,
+                                   round_off = ?, total_amount = ?, payment_status = ?, notes = ?
+                                   WHERE id = ?''',
+                                (new_bill_id, customer_id, bill_date, subtotal, gst_amount, round_off, total_amount,
+                                 payment_status, notes, bill_id))
+
+                    # Delete all old billing items and re-insert new ones
+                    conn.execute('DELETE FROM billing_items WHERE bill_id = ?', (current_bill_id_text,))
+
+                    # Insert all new bill items, then deduct inventory
+                    for item in items:
+                        conn.execute('''INSERT INTO billing_items (bill_id, product_id, product_name, hsn_code, quantity,
+                                       unit_price, gst_percentage, gst_amount, cgst, sgst, igst, total)
+                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                    (new_bill_id, item['product_id'], item['product_name'], item.get('hsn_code', ''),
+                                     item['quantity'], item['unit_price'], item['gst_percentage'],
+                                     item['gst_amount'], item.get('cgst', 0), item.get('sgst', 0),
+                                     item.get('igst', 0), item['total']))
+
+                        conn.execute('UPDATE inventory SET quantity = quantity - ? WHERE id = ?',
+                                    (item['quantity'], item['product_id']))
+
+                    conn.commit()
+
+                    flash(f'Bill {new_bill_id} updated successfully with {len(items)} item(s)! Inventory updated.', 'success')
+                    return redirect(url_for('billing.index'))
+                except ValueError as e:
+                    conn.rollback()
+                    flash(str(e), 'error')
                     return redirect(url_for('billing.update', bill_id=bill_id))
-                
-                # Get all data for the confirmation form
-                bill = conn.execute('SELECT * FROM billing WHERE id = ?', (bill_id,)).fetchone()
-                customers_rows = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
-                customers = [dict(row) for row in customers_rows]
-                inventory_rows = conn.execute('SELECT * FROM inventory ORDER BY product_name').fetchall()
-                inventory = [dict(row) for row in inventory_rows]
-                
-                # Show confirmation page with inventory changes
-                return render_template('billing/update_confirm.html',
-                                     bill=dict(bill),
-                                     items=items,
-                                     customers=customers,
-                                     inventory=inventory,
-                                     inventory_changes=inventory_changes,
-                                     form_data={
-                                         'bill_id': new_bill_id,
-                                         'customer_id': customer_id,
-                                         'bill_date': bill_date,
-                                         'payment_status': payment_status,
-                                         'notes': notes,
-                                         'items_data': items_json
-                                     })
-            
-            # User confirmed - proceed with update
-            # Restore old inventory quantities
-            for old_item in old_items:
-                conn.execute('UPDATE inventory SET quantity = quantity + ? WHERE id = ?',
-                            (old_item['quantity'], old_item['product_id']))
+                except Exception as e:
+                    conn.rollback()
+                    flash(f'Error updating bill: {str(e)}', 'error')
+                    return redirect(url_for('billing.update', bill_id=bill_id))
             
             # Group items by product_id and sum quantities for duplicate products
             product_quantities = {}
