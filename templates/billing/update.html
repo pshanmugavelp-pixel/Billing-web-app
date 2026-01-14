@@ -371,6 +371,9 @@
             <div class="items-section">
                 <h2>Bill Items - Adjust Quantities & Prices</h2>
                 <div class="help-text" style="margin-bottom: 15px; color: #666;">Edit quantities or unit prices directly. Changes will automatically recalculate totals. Minimum quantity is 1.</div>
+                <div id="lastItemWarning" class="alert alert-warning" style="display: none; margin-bottom: 15px;">
+                    <strong>⚠️ Last Item:</strong> You cannot remove the last item. A bill must have at least one item.
+                </div>
                 <div id="itemsList">
                     <div class="empty-items">No items in this bill.</div>
                 </div>
@@ -556,6 +559,14 @@
         
         function renderItems() {
             const itemsList = document.getElementById('itemsList');
+            const warningDiv = document.getElementById('lastItemWarning');
+            
+            // Show/hide warning message
+            if (billItems.length === 1) {
+                warningDiv.style.display = 'block';
+            } else {
+                warningDiv.style.display = 'none';
+            }
             
             if (billItems.length === 0) {
                 itemsList.innerHTML = '<div class="empty-items">No items in this bill.</div>';
@@ -575,7 +586,7 @@
                         <strong>${item.product_name}</strong>
                         <button type="button" 
                                 class="btn-danger" 
-                                onclick="removeItem(${index})"
+                                onclick="${billItems.length <= 1 ? 'showLastItemAlert()' : `removeItem(${index})`}"
                                 ${billItems.length <= 1 ? 'disabled title="Cannot remove the last item"' : ''}>
                             Remove
                         </button>
@@ -680,9 +691,13 @@
             updateTotals();
         }
         
+        function showLastItemAlert() {
+            alert('⚠️ Cannot remove the last item.\n\nA bill must have at least one item. If you want to change the product, please add a new item first, then remove this one.');
+        }
+        
         function removeItem(index) {
             if (billItems.length <= 1) {
-                alert('Cannot remove the last item. A bill must have at least one item.');
+                showLastItemAlert();
                 return;
             }
             
