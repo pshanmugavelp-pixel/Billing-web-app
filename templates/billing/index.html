@@ -162,6 +162,12 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
         
         table {
             width: 100%;
@@ -354,7 +360,9 @@
                             <td class="no-print">
                                 <div style="display: flex; gap: 5px;">
                                     <a href="{{ url_for('billing.view', id=bill['id']) }}" class="btn btn-info" style="padding: 6px 12px; font-size: 12px;">View</a>
+                                    {% if bill['payment_status'] != 'Cancelled' %}
                                     <a href="{{ url_for('billing.update', bill_id=bill['id']) }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; background: #f39c12;">Edit</a>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>

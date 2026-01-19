@@ -144,6 +144,12 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
         
         .form-row {
             display: grid;
@@ -213,6 +219,27 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
+        }
+        
+        .btn-remove-item {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .btn-remove-item:hover {
+            background: #c0392b;
+        }
+        
+        .btn-remove-item:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
         
         .item-details {
@@ -342,8 +369,11 @@
             
             <!-- Items List -->
             <div class="items-section">
-                <h2>Bill Items - Adjust Quantities</h2>
-                <div class="help-text" style="margin-bottom: 15px; color: #666;">Use +/- buttons to adjust quantities. Minimum quantity is 1.</div>
+                <h2>Bill Items - Adjust Quantities & Prices</h2>
+                <div class="help-text" style="margin-bottom: 15px; color: #666;">Edit quantities or unit prices directly. Changes will automatically recalculate totals. Minimum quantity is 1.</div>
+                <div id="lastItemWarning" class="alert alert-warning" style="display: none; margin-bottom: 15px;">
+                    <strong>⚠️ Last Item:</strong> You cannot remove the last item. A bill must have at least one item.
+                </div>
                 <div id="itemsList">
                     <div class="empty-items">No items in this bill.</div>
                 </div>
@@ -409,6 +439,25 @@
         const sellerState = '{{ seller_state }}';
         let billItems = [];
         let customerState = '';
+        let isLoading = false;
+        
+        // Function to normalize state names (Issue #10 - moved to global scope)
+        function normalizeStateName(state) {
+            if (!state) return '';
+            const normalized = state.trim().toLowerCase().replace(/\s+/g, '');
+            
+            // Handle Pondicherry/Puducherry variations
+            if (normalized === 'pondicherry' || normalized === 'puducherry') {
+                return 'puducherry';
+            }
+            
+            // Handle Tamil Nadu variations (with or without space)
+            if (normalized === 'tamilnadu' || normalized === 'tamil nadu') {
+                return 'tamilnadu';
+            }
+            
+            return normalized;
+        }
         
         // Load existing customer data
         window.addEventListener('DOMContentLoaded', function() {
@@ -470,8 +519,17 @@
         });
         
         function selectCustomer(customerId) {
+            // Issue #13: Prevent race conditions with loading state
+            if (isLoading) return;
+            isLoading = true;
+            
             fetch(`/billing/api/customer/${customerId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch customer data');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     document.getElementById('customer_id').value = data.id;
                     document.getElementById('customer_id_display').value = data.customer_id || '';
@@ -486,6 +544,14 @@
                     billItems.forEach((item, index) => recalculateItem(index));
                     renderItems();
                     updateTotals();
+                })
+                .catch(error => {
+                    // Issue #5: Add error handling
+                    console.error('Error fetching customer:', error);
+                    alert('Failed to load customer data. Please try again.');
+                })
+                .finally(() => {
+                    isLoading = false;
                 });
         }
         
@@ -493,6 +559,14 @@
         
         function renderItems() {
             const itemsList = document.getElementById('itemsList');
+            const warningDiv = document.getElementById('lastItemWarning');
+            
+            // Show/hide warning message
+            if (billItems.length === 1) {
+                warningDiv.style.display = 'block';
+            } else {
+                warningDiv.style.display = 'none';
+            }
             
             if (billItems.length === 0) {
                 itemsList.innerHTML = '<div class="empty-items">No items in this bill.</div>';
@@ -510,6 +584,12 @@
                 <div class="item-row">
                     <div class="item-header">
                         <strong>${item.product_name}</strong>
+                        <button type="button" 
+                                class="btn-danger" 
+                                onclick="${billItems.length <= 1 ? 'showLastItemAlert()' : `removeItem(${index})`}"
+                                ${billItems.length <= 1 ? 'disabled title="Cannot remove the last item"' : ''}>
+                            Remove
+                        </button>
                     </div>
                     <div class="item-details">
                         ${item.hsn_code ? `<div class="item-detail">
@@ -521,7 +601,7 @@
                             <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
                                 <input type="number"
                                        value="${item.quantity}"
-                                       min="0"
+                                       min="1"
                                        onchange="updateQuantity(${index}, this.value)"
                                        style="width: 80px; padding: 8px; font-size: 18px; font-weight: bold; text-align: center; border: 2px solid #3498db; border-radius: 5px;">
                                 ${changeIndicator}
@@ -529,7 +609,15 @@
                         </div>
                         <div class="item-detail">
                             <strong>Unit Price</strong>
-                            ₹${item.unit_price.toFixed(2)}
+                            <div style="display: flex; align-items: center; gap: 5px; margin-top: 8px;">
+                                <span style="font-size: 16px;">₹</span>
+                                <input type="number"
+                                       value="${item.unit_price.toFixed(2)}"
+                                       min="0.01"
+                                       step="0.01"
+                                       onchange="updateUnitPrice(${index}, this.value)"
+                                       style="width: 100px; padding: 8px; font-size: 16px; text-align: right; border: 2px solid #3498db; border-radius: 5px;">
+                            </div>
                         </div>
                         <div class="item-detail">
                             <strong>GST (${item.gst_percentage}%)</strong>
@@ -545,7 +633,14 @@
         }
         
         function updateQuantity(index, newValue) {
-            const quantity = parseInt(newValue) || 0;
+            const quantity = parseInt(newValue) || 1;
+            
+            if (quantity < 1) {
+                alert('Quantity must be at least 1. To remove an item, use the Remove button.');
+                billItems[index].quantity = 1;
+                renderItems();
+                return;
+            }
             
             if (quantity < 0) {
                 alert('Quantity cannot be negative!');
@@ -554,6 +649,11 @@
             }
             
             if (quantity === 0) {
+                if (billItems.length <= 1) {
+                    alert('Cannot remove the last item. A bill must have at least one item.');
+                    renderItems();
+                    return;
+                }
                 if (confirm('Setting quantity to 0 will remove this item from the bill. Continue?')) {
                     billItems.splice(index, 1);
                     renderItems();
@@ -570,6 +670,45 @@
             updateTotals();
         }
         
+        function updateUnitPrice(index, newValue) {
+            const unitPrice = parseFloat(newValue) || 0;
+            
+            if (unitPrice < 0) {
+                alert('Unit price cannot be negative!');
+                renderItems();
+                return;
+            }
+            
+            if (unitPrice === 0) {
+                alert('Unit price cannot be zero!');
+                renderItems();
+                return;
+            }
+            
+            billItems[index].unit_price = unitPrice;
+            recalculateItem(index);
+            renderItems();
+            updateTotals();
+        }
+        
+        function showLastItemAlert() {
+            alert('⚠️ Cannot remove the last item.\n\nA bill must have at least one item. If you want to change the product, please add a new item first, then remove this one.');
+        }
+        
+        function removeItem(index) {
+            if (billItems.length <= 1) {
+                showLastItemAlert();
+                return;
+            }
+            
+            const item = billItems[index];
+            if (confirm(`Remove "${item.product_name}" from this bill?`)) {
+                billItems.splice(index, 1);
+                renderItems();
+                updateTotals();
+            }
+        }
+        
         function recalculateItem(index) {
             const item = billItems[index];
             item.subtotal = item.quantity * item.unit_price;
@@ -577,24 +716,6 @@
             
             // Calculate CGST/SGST or IGST based on customer state
             let cgst = 0, sgst = 0, igst = 0;
-            
-            // Function to normalize state names
-            function normalizeStateName(state) {
-                if (!state) return '';
-                const normalized = state.trim().toLowerCase().replace(/\s+/g, '');
-                
-                // Handle Pondicherry/Puducherry variations
-                if (normalized === 'pondicherry' || normalized === 'puducherry') {
-                    return 'puducherry';
-                }
-                
-                // Handle Tamil Nadu variations (with or without space)
-                if (normalized === 'tamilnadu' || normalized === 'tamil nadu') {
-                    return 'tamilnadu';
-                }
-                
-                return normalized;
-            }
             
             const normalizedCustomerState = normalizeStateName(customerState);
             
@@ -617,11 +738,23 @@
         function updateTotals() {
             const subtotal = billItems.reduce((sum, item) => sum + item.subtotal, 0);
             const gstAmount = billItems.reduce((sum, item) => sum + item.gst_amount, 0);
-            const total = billItems.reduce((sum, item) => sum + item.total, 0);
+            const totalBeforeRound = billItems.reduce((sum, item) => sum + item.total, 0);
+            
+            // Issue #4: Apply round-off logic to match backend
+            const decimalPart = totalBeforeRound - Math.floor(totalBeforeRound);
+            let roundedTotal, roundOff;
+            
+            if (decimalPart >= 0.55) {
+                roundedTotal = Math.ceil(totalBeforeRound);
+                roundOff = roundedTotal - totalBeforeRound;
+            } else {
+                roundedTotal = Math.floor(totalBeforeRound);
+                roundOff = roundedTotal - totalBeforeRound;
+            }
             
             document.getElementById('display_subtotal').textContent = `₹${subtotal.toFixed(2)}`;
             document.getElementById('display_gst').textContent = `₹${gstAmount.toFixed(2)}`;
-            document.getElementById('display_total').textContent = `₹${total.toFixed(2)}`;
+            document.getElementById('display_total').textContent = `₹${roundedTotal.toFixed(2)}`;
         }
         
         // Form submission
@@ -632,8 +765,21 @@
                 return;
             }
             
+            // Issue #12: Prevent multiple submissions
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn.disabled) {
+                e.preventDefault();
+                return;
+            }
+            
             // Set items data as JSON before submitting
             document.getElementById('items_data').value = JSON.stringify(billItems);
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+            submitBtn.style.opacity = '0.6';
+            
             // Form will submit and show confirmation page on server side
         });
         

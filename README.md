@@ -26,38 +26,57 @@ The system uses a modular Flask Blueprint architecture with SQLite database for 
 ## Project Structure
 
 ```
-Billing/
-├── app.py                          # Main Flask application entry point
-├── database.py                     # Database connection and schema management
+Billing-web-app/
+├── app.py                          # Flask application entry point
+├── database.py                     # SQLite connection + schema initialization
+├── check_and_migrate.py            # Migration helper (if applicable)
+├── migrate_db.py                   # Migration script (if applicable)
+├── main.py                         # Sample script (not the web entrypoint)
 ├── requirements.txt                # Python dependencies
 ├── business.db                     # SQLite database file (auto-created)
-├── routes/                         # Blueprint modules for routing
-│   ├── __init__.py                # Routes package initializer
-│   ├── customers.py               # Customer CRUD operations
-│   ├── inventory.py               # Inventory CRUD operations
-│   ├── billing.py                 # Billing operations with inventory tracking
-│   └── admin.py                   # Admin panel for database management
+├── routes/                         # Blueprint modules
+│   ├── __init__.py
+│   ├── customers.py                # Customer CRUD + pagination/search
+│   ├── inventory.py                # Inventory CRUD + inventory APIs
+│   ├── purchases.py                # Purchase entries that update inventory
+│   ├── billing.py                  # Billing (multi-item), cancel/delete, APIs
+│   └── admin.py                    # Admin DB views + seller info
 └── templates/                      # Jinja2 HTML templates
-    ├── dashboard.html             # Main dashboard/home page
-    ├── customers/
-    │   ├── index.html             # Customer list with search and bulk operations
-    │   ├── add.html               # Add new customer form
-    │   └── update.html            # Edit customer form
-    ├── inventory/
-    │   ├── index.html             # Inventory list with stock indicators
-    │   ├── add.html               # Add new product form
-    │   └── update.html            # Edit product form
-    ├── billing/
-    │   ├── index.html             # Bills list with payment status
-    │   ├── create.html            # Create bill with multiple items
-    │   ├── view.html              # View complete bill details
-    │   └── update.html            # Edit existing bill
-    └── admin/
-        ├── index.html             # Admin dashboard
-        └── view_table.html        # View table schema and data
+   ├── dashboard.html
+   ├── pagination.html
+   ├── customers/ (index/add/update)
+   ├── inventory/ (index/add/update)
+   ├── purchases/ (index/add/add_confirm)
+   ├── billing/ (index/create/view/update/print/cancel_confirm/...)
+   └── admin/ (index/seller_info/view_table)
 ```
 
 ## Architecture
+
+### Architecture Diagram
+
+```mermaid
+flowchart LR
+   U[User / Browser]
+
+   subgraph F[Flask Web App]
+      A[app.py\nFlask application]
+      R[Blueprint Routes\n(routes/*.py)]
+      T[Jinja2 Templates\n(templates/*.html)]
+   end
+
+   subgraph D[Data Layer]
+      DB[database.py\nSQLite connection + schema]
+      S[(business.db\nSQLite)]
+   end
+
+   U -->|HTTP requests| A
+   A --> R
+   R -->|render_template(...)| T
+   R -->|SQL queries / transactions| DB
+   DB --> S
+   T -->|HTML responses| U
+```
 
 ### Flask Blueprint Structure
 The application uses Flask Blueprints for modular organization:
@@ -65,11 +84,13 @@ The application uses Flask Blueprints for modular organization:
 - **Main App (`app.py`)**: Registers all blueprints and serves the dashboard
 - **Customer Blueprint**: Handles all customer-related routes (`/customers/*`)
 - **Inventory Blueprint**: Manages inventory operations (`/inventory/*`)
+- **Purchases Blueprint**: Records purchases and updates inventory (`/purchases/*`)
 - **Billing Blueprint**: Processes billing with inventory integration (`/billing/*`)
 - **Admin Blueprint**: Provides database management interface (`/admin/*`)
 
 ### Database Layer (`database.py`)
-- **`get_db_connection()`**: Context manager for database connections with row_factory
+- **`get_db_connection()`**: Creates a SQLite connection with `row_factory`
+- **`db_connection()`**: Context manager that yields a connection and always closes it
 - **`init_db()`**: Creates all tables if they don't exist
 - **Schema Definitions**: SQL CREATE TABLE statements for all entities
 
@@ -114,6 +135,7 @@ Tracks product stock, pricing, and expiry information.
 | manufacture_date | TEXT | | Manufacturing date |
 | expiry_month | TEXT | NOT NULL | Expiry month (MM/YYYY) |
 | quantity | INTEGER | NOT NULL | Current stock quantity |
+| buy_price | REAL | NOT NULL | Purchase price per unit (₹) |
 | unit_price | REAL | NOT NULL | Price per unit (₹) |
 | mrp | REAL | NOT NULL | Maximum retail price (₹) |
 | gst_percentage | REAL | NOT NULL | GST percentage (e.g., 18.0) |
@@ -135,14 +157,15 @@ Stores bill header information.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | INTEGER | PRIMARY KEY AUTOINCREMENT | Bill ID |
-| customer_id | TEXT | FOREIGN KEY → customers(customer_id) | Reference to customer |
-| bill_date | TEXT | NOT NULL | Bill date (YYYY-MM-DD) |
-| subtotal | REAL | | Sum of all items before GST |
-| gst_amount | REAL | | Total GST amount |
-| total_amount | REAL | NOT NULL | Final bill amount (₹) |
-| payment_status | TEXT | | Status: Paid/Pending/Partial |
-| payment_method | TEXT | | Method: Cash/Card/UPI/Bank Transfer |
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | Internal numeric ID |
+| bill_id | TEXT | UNIQUE NOT NULL | Business bill ID (e.g., ST123) |
+| customer_id | INTEGER | FOREIGN KEY → customers(id) | Reference to customer |
+| bill_date | DATE | NOT NULL | Bill date (YYYY-MM-DD) |
+| subtotal | REAL | DEFAULT 0.0 | Sum of all items before GST |
+| gst_amount | REAL | DEFAULT 0.0 | Total GST amount |
+| round_off | REAL | DEFAULT 0.0 | Round-off adjustment |
+| total_amount | REAL | NOT NULL | Final rounded bill amount (₹) |
+| payment_status | TEXT | DEFAULT 'Pending' | Status (Pending/Paid/Cancelled/etc.) |
 | notes | TEXT | | Additional notes |
 | created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
 
@@ -152,20 +175,29 @@ Stores individual line items for each bill (one-to-many relationship).
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | INTEGER | PRIMARY KEY AUTOINCREMENT | Item ID |
-| bill_id | INTEGER | FOREIGN KEY → billing(id) ON DELETE CASCADE | Reference to bill |
-| product_id | TEXT | FOREIGN KEY → inventory(product_id) | Reference to product |
+| bill_id | TEXT | FOREIGN KEY → billing(bill_id) ON DELETE CASCADE | Reference to bill (business ID) |
+| product_id | INTEGER | FOREIGN KEY → inventory(id) | Reference to inventory row |
 | product_name | TEXT | NOT NULL | Product name (snapshot) |
+| hsn_code | TEXT | | HSN/SAC code |
 | quantity | INTEGER | NOT NULL | Quantity sold |
 | unit_price | REAL | NOT NULL | Price per unit (₹) |
-| subtotal | REAL | NOT NULL | quantity × unit_price |
 | gst_percentage | REAL | NOT NULL | GST percentage |
 | gst_amount | REAL | NOT NULL | GST amount for this item |
-| total | REAL | NOT NULL | subtotal + gst_amount |
+| cgst | REAL | NOT NULL | CGST component |
+| sgst | REAL | NOT NULL | SGST component |
+| igst | REAL | NOT NULL | IGST component |
+| total | REAL | NOT NULL | Line total (incl. GST) |
 
 **Relationships:**
 - Each bill can have multiple items (1:N)
 - Deleting a bill cascades to delete all its items
-- Items reference inventory for stock validation
+- Items reference inventory rows for stock validation
+
+### Table: `seller_info`
+Stores seller/company information used in invoices and GST state logic.
+
+### Table: `purchases`
+Tracks stock additions (purchases) and can update inventory quantities.
 
 ## Features
 
@@ -196,7 +228,7 @@ Stores individual line items for each bill (one-to-many relationship).
 - Single customer deletion
 - Redirects to list
 
-**Bulk Delete** (`POST /customers/bulk-delete`)
+**Bulk Delete** (`POST /customers/delete-multiple`)
 - Accepts array of customer_ids
 - Deletes multiple customers in one operation
 
@@ -225,14 +257,14 @@ Stores individual line items for each bill (one-to-many relationship).
 **Delete Product** (`POST /inventory/delete/<product_id>`)
 - Single product deletion
 
-**Bulk Delete** (`POST /inventory/bulk-delete`)
+**Bulk Delete** (`POST /inventory/delete-multiple`)
 - Deletes multiple products
 
 ### 3. Billing System (`/billing/`)
 
 **List Bills** (`GET /billing/`)
 - Displays all bills with ID column
-- Shows: customer name, item count, bill date, total amount (₹), payment status, payment method
+- Shows: customer name, item count, bill date, total amount (₹), payment status
 - Bulk selection and delete
 - Excel export
 - Print functionality
@@ -297,7 +329,7 @@ Stores individual line items for each bill (one-to-many relationship).
 - Restores inventory quantities
 - Deletes bill (cascades to items)
 
-**Bulk Delete Bills** (`POST /billing/bulk-delete`)
+**Bulk Delete Bills** (`POST /billing/delete-multiple`)
 - Processes multiple bills
 - Restores inventory for all items
 - Deletes all selected bills
@@ -342,7 +374,7 @@ python app.py
 ```
 
 4. **Access the application:**
-Open browser and navigate to: `http://localhost:5000`
+Open browser and navigate to: `http://localhost:8080`
 
 The database (`business.db`) will be created automatically on first run.
 
@@ -402,8 +434,9 @@ The database (`business.db`) will be created automatically on first run.
 
 ## API Endpoints
 
-### Customer API
-- `GET /customers/api/customer/<customer_id>` - Returns customer JSON data
+### Billing APIs (used by the billing UI)
+- `GET /billing/api/customer/<customer_id>` - Returns customer JSON data (note: `customer_id` is the internal numeric ID)
+- `GET /billing/api/product/<product_id>` - Returns product JSON data (note: `product_id` is the internal numeric ID)
 
 **Response:**
 ```json
@@ -418,8 +451,9 @@ The database (`business.db`) will be created automatically on first run.
 }
 ```
 
-### Inventory API
-- `GET /billing/api/product/<product_id>` - Returns product JSON data
+### Inventory APIs
+- `GET /inventory/api/products` - Returns all inventory rows (for autocomplete)
+- `GET /inventory/api/next-product-id` - Returns the next auto-generated Product ID
 
 **Response:**
 ```json
@@ -540,12 +574,12 @@ XLSX.writeFile(wb, 'filename.xlsx');
 ## Configuration
 
 ### Port
-Default port: `5000`
+Default port: `8080`
 
 To change port, modify `app.py`:
 ```python
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)  # Change port here
+   app.run(debug=True, host='0.0.0.0', port=8080)  # Change port here
 ```
 
 ### Database
@@ -579,7 +613,6 @@ Set to `False` for production deployment.
   "customer_id": "CUST001",
   "bill_date": "2024-01-15",
   "payment_status": "Paid",
-  "payment_method": "Cash",
   "items": [
     {"product_id": "PROD001", "quantity": 5},
     {"product_id": "PROD002", "quantity": 3}
