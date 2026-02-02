@@ -9,6 +9,13 @@ from datetime import datetime
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
+
+def _indian_financial_year_label(date_obj):
+    """Return Indian financial year label as 'YY-YY' (FY runs Apr 1 -> Mar 31)."""
+    fy_start_year = date_obj.year if date_obj.month >= 4 else (date_obj.year - 1)
+    fy_end_year = fy_start_year + 1
+    return f'{fy_start_year % 100:02d}-{fy_end_year % 100:02d}'
+
 @billing_bp.route('/')
 def index():
     """Display all bills with optional filter for cancelled bills and pagination"""
@@ -543,9 +550,14 @@ def print_bill(id):
         # Convert bill to dict and format date
         bill_dict = dict(bill)
         if bill_dict['bill_date']:
-            # Convert YYYY-MM-DD to DD-MM-YYYY
-            date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
-            bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+            # Use the stored bill date to determine FY
+            date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d').date()
+            bill_dict['financial_year'] = _indian_financial_year_label(date_obj)
+            # Convert YYYY-MM-DD to DD-MM-YYYY for display
+            bill_dict['bill_date'] = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d').strftime('%d-%m-%Y')
+        else:
+            # Fallback (should be rare): use today's date
+            bill_dict['financial_year'] = _indian_financial_year_label(datetime.today().date())
 
         items = conn.execute('''
             SELECT bi.*, i.product_id as inventory_product_id
@@ -601,9 +613,11 @@ def print_multiple():
             # Convert bill to dict and format date
             bill_dict = dict(bill)
             if bill_dict['bill_date']:
-                # Convert YYYY-MM-DD to DD-MM-YYYY
-                date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d')
-                bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
+                date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d').date()
+                bill_dict['financial_year'] = _indian_financial_year_label(date_obj)
+                bill_dict['bill_date'] = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d').strftime('%d-%m-%Y')
+            else:
+                bill_dict['financial_year'] = _indian_financial_year_label(datetime.today().date())
 
             # Get bill items
             items = conn.execute('''
@@ -612,7 +626,7 @@ def print_multiple():
                 LEFT JOIN inventory i ON bi.product_id = i.id
                 WHERE bi.bill_id = ?
                 ORDER BY bi.id
-            ''', (bill_id,)).fetchall()
+            ''', (bill_dict['bill_id'],)).fetchall()
 
             bills_data.append({
                 'bill': bill_dict,
