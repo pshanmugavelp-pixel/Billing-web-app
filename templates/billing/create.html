@@ -401,7 +401,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="item_unit_price">Unit Price (₹) <span class="required">*</span></label>
-                        <input type="number" id="item_unit_price" step="0.01" min="0" placeholder="0.00">
+                        <input type="number" id="item_unit_price" step="0.00000001" min="0" placeholder="0.00">
                         <div class="help-text">Edit price if needed before adding to bill</div>
                     </div>
                     
@@ -596,7 +596,7 @@
                 document.getElementById('product_select').value = productId;
                 document.getElementById('selected_product_display').value = `${product.product_id} - ${product.product_name}`;
                 document.getElementById('available_stock').value = product.quantity;
-                document.getElementById('item_unit_price').value = product.unit_price.toFixed(2);
+                document.getElementById('item_unit_price').value = product.unit_price.toFixed(7);
                 productSearch.value = `${product.product_id} - ${product.product_name}`;
                 productSearchResults.classList.remove('show');
                 updateSubtotalPreview();
