@@ -31,6 +31,9 @@
     --gst-pct-width: 1ch;
     --gst-amt-width: 2ch;
     --gst-block-width: 2in;
+
+    --value-red: red;
+    --label-green: green;
 }
 
 body {
@@ -49,6 +52,7 @@ body {
 .col-sl { width: 2ch; }
 .col-hsn { width: 8ch; }
 .col-qty { width: 5ch; }
+.col-mrp { width: 8ch; }
 .col-price { width: 8ch; }
 .col-taxable { width: 10ch; }
 .col-total { width: 12ch; }
@@ -123,6 +127,10 @@ th {
     color: var(--seller-color);
 }
 
+.value-red { color: var(--value-red); }
+.label-green { color: var(--label-green); }
+.address-green { color: var(--label-green); }
+
 /* ================= BILL ADDRESS ================= */
 .bill-address {
     font-size: 0.8rem;
@@ -143,7 +151,6 @@ th {
     max-height: 85px;
     max-width: 85px;
     object-fit: contain;
-    filter: grayscale(100%) sepia(100%) saturate(300%) hue-rotate(200deg);
 }
 
 .sign-line {
@@ -152,6 +159,35 @@ th {
     border-top: 1px solid #000;
     font-weight: bold;
     font-size: 0.65rem;
+}
+
+.account-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.account-table td {
+    border: none;
+    padding: 0 2px 0 0;
+    font-size: var(--font-small);
+    line-height: 1.4;
+}
+
+.account-table .label {
+    width: 24%;
+    white-space: nowrap;
+}
+
+.account-table .colon {
+    width: 2%;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.account-table .value {
+    width: 74%;
+    word-break: break-word;
 }
 </style>
 </head>
@@ -162,9 +198,9 @@ th {
 <!-- SELLER -->
 <div class="header">
     <h1>{{ seller['seller_name'] }}</h1>
-    <p>{{ seller['address'] }}</p>
-    <p>Mob: {{ seller['mobile'] }} | Email: {{ seller['email'] }}</p>
-    <p>GSTIN: {{ seller['gst_number'] }}</p>
+    <p class="label-green">{{ seller['address'] }}</p>
+    <p><span class="label-green">Mob:</span> <span class="value-red">{{ seller['mobile'] }}</span> | Email: {{ seller['email'] }}</p>
+    <p><span class="label-green">GSTIN:</span> <span class="value-red">{{ seller['gst_number'] }}</span></p>
 </div>
 
 <div class="section text-center"><strong>TAX INVOICE</strong></div>
@@ -206,6 +242,7 @@ th {
     <th rowspan="2" class="col-hsn">HSN</th>
     <th rowspan="2" class="col-item">ITEM NAME</th>
     <th rowspan="2" class="col-qty">QTY</th>
+    <th rowspan="2" class="col-mrp">MRP</th>
     <th rowspan="2" class="col-price">PRICE</th>
     <th rowspan="2" class="col-taxable">TAXABLE</th>
 
@@ -244,6 +281,9 @@ th {
 <td>{{ item['hsn_code'] or '-' }}</td>
 <td class="col-item">{{ item['product_name'] }}</td>
 <td class="text-center">{{ item['quantity'] }}</td>
+<td class="text-right">
+{% if item['mrp'] is not none %}{{ "%.3f"|format(item['mrp']) }}{% else %}-{% endif %}
+</td>
 <td class="text-right">{{ "%.3f"|format(item['unit_price']) }}</td>
 <td class="text-right">{{ "%.3f"|format(taxable) }}</td>
 
@@ -267,6 +307,7 @@ th {
 <td colspan="3" class="text-right">TOTAL</td>
 <td class="text-center">{{ ns.total_qty }}</td>
 <td></td>
+<td></td>
 <td class="text-right">{{ "%.3f"|format(ns.total_taxable) }}</td>
 
 {% if has_cgst_sgst %}
@@ -284,7 +325,7 @@ th {
 <td class="text-right">
     {{ "%.3f"|format(ns.total_amount) }}<br>
     <small style="font-size:0.5rem;">Round Off: {{ "%.2f"|format(bill['round_off']) }}</small><br>
-    <strong>{{ "%.2f"|format(bill['total_amount']) }}</strong>
+    <strong><span class="value-red">{{ "%.2f"|format(bill['total_amount']) }}</span></strong>
 </td>
 </tr>
 </tbody>
@@ -295,10 +336,28 @@ th {
 <tr>
     <td colspan="4">
         <strong>ACCOUNT DETAILS</strong><br><br>
-        A/c Name: {{ seller['account_name'] }}<br>
-        A/c No: {{ seller['account_number'] }}<br>
-        IFSC: {{ seller['ifsc_code'] }}<br>
-        Branch: {{ seller['branch'] }}
+        <table class="account-table">
+            <tr>
+                <td class="label"><span class="label-green">A/c Name</span></td>
+                <td class="colon"><span class="label-green">:</span></td>
+                <td class="value"><span class="value-red">{{ seller['account_name'] }}</span></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="label-green">A/c No</span></td>
+                <td class="colon"><span class="label-green">:</span></td>
+                <td class="value"><span class="value-red">{{ seller['account_number'] }}</span></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="label-green">IFSC</span></td>
+                <td class="colon"><span class="label-green">:</span></td>
+                <td class="value"><span class="value-red">{{ seller['ifsc_code'] }}</span></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="label-green">Branch</span></td>
+                <td class="colon"><span class="label-green">:</span></td>
+                <td class="value"><span class="value-red">{{ seller['branch'] }}</span></td>
+            </tr>
+        </table>
     </td>
 
     <td colspan="4" style="text-align:center;">
@@ -309,7 +368,7 @@ th {
 
     <td colspan="4" style="text-align:center;">
         <div class="seal-box">
-            <img src="{{ url_for('static', filename='company_seal.png') }}">
+            <img src="{{ url_for('static', filename='Logo/Company_Seal.jpeg') }}" alt="Company Seal">
         </div>
         <div class="sign-line">AUTHORISED SIGNATORY</div>
     </td>

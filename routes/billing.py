@@ -520,7 +520,7 @@ def view(id):
             bill_dict['bill_date'] = date_obj.strftime('%d-%m-%Y')
 
         items = conn.execute('''
-            SELECT bi.*, i.product_id as inventory_product_id
+            SELECT bi.*, i.product_id as inventory_product_id, i.mrp as mrp
             FROM billing_items bi
             LEFT JOIN inventory i ON bi.product_id = i.id
             WHERE bi.bill_id = ?
@@ -560,7 +560,7 @@ def print_bill(id):
             bill_dict['financial_year'] = _indian_financial_year_label(datetime.today().date())
 
         items = conn.execute('''
-            SELECT bi.*, i.product_id as inventory_product_id
+            SELECT bi.*, i.product_id as inventory_product_id, i.mrp as mrp
             FROM billing_items bi
             LEFT JOIN inventory i ON bi.product_id = i.id
             WHERE bi.bill_id = ?
@@ -621,7 +621,7 @@ def print_multiple():
 
             # Get bill items
             items = conn.execute('''
-                SELECT bi.*, i.product_id as inventory_product_id
+                SELECT bi.*, i.product_id as inventory_product_id, i.mrp as mrp
                 FROM billing_items bi
                 LEFT JOIN inventory i ON bi.product_id = i.id
                 WHERE bi.bill_id = ?

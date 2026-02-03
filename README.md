@@ -34,6 +34,11 @@ Billing-web-app/
 ├── main.py                         # Sample script (not the web entrypoint)
 ├── requirements.txt                # Python dependencies
 ├── business.db                     # SQLite database file (auto-created)
+├── Logo/                           # Assets source folder
+│   └── Company_Seal.jpeg            # Source seal image used in invoice print
+├── static/                          # Flask static assets
+│   └── Logo/
+│       └── Company_Seal.jpeg        # Served seal image (auto-synced from Logo/)
 ├── routes/                         # Blueprint modules
 │   ├── __init__.py
 │   ├── customers.py                # Customer CRUD + pagination/search
@@ -228,9 +233,11 @@ Tracks stock additions (purchases) and can update inventory quantities.
 - Single customer deletion
 - Redirects to list
 
-**Bulk Delete** (`POST /customers/delete-multiple`)
+**Bulk Delete** (`POST /customers/bulk-delete`)
 - Accepts array of customer_ids
 - Deletes multiple customers in one operation
+
+> Note: In the current implementation, bulk delete is handled via `POST /customers/delete-multiple`.
 
 ### 2. Inventory Management (`/inventory/`)
 
@@ -257,8 +264,10 @@ Tracks stock additions (purchases) and can update inventory quantities.
 **Delete Product** (`POST /inventory/delete/<product_id>`)
 - Single product deletion
 
-**Bulk Delete** (`POST /inventory/delete-multiple`)
+**Bulk Delete** (`POST /inventory/bulk-delete`)
 - Deletes multiple products
+
+> Note: In the current implementation, bulk delete is handled via `POST /inventory/delete-multiple`.
 
 ### 3. Billing System (`/billing/`)
 
@@ -329,10 +338,12 @@ Tracks stock additions (purchases) and can update inventory quantities.
 - Restores inventory quantities
 - Deletes bill (cascades to items)
 
-**Bulk Delete Bills** (`POST /billing/delete-multiple`)
+**Bulk Delete Bills** (`POST /billing/bulk-delete`)
 - Processes multiple bills
 - Restores inventory for all items
 - Deletes all selected bills
+
+> Note: In the current implementation, bulk delete is handled via `POST /billing/delete-multiple`.
 
 ### 4. Admin Panel (`/admin/`)
 
@@ -528,6 +539,10 @@ XLSX.writeFile(wb, 'filename.xlsx');
 - CSS media queries hide interactive elements
 - `.no-print` class for buttons and checkboxes
 - Print-optimized layout
+
+**Company Seal / Logo in Print:**
+- Place the seal image at `Logo/Company_Seal.jpeg`.
+- On app startup, `app.py` auto-syncs it into `static/Logo/Company_Seal.jpeg` so the print templates can load it via `url_for('static', filename='Logo/Company_Seal.jpeg')`.
 
 ### Form Validation
 
