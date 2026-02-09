@@ -88,6 +88,7 @@ def add():
         address = request.form.get('address', '')
         state = request.form.get('state', '')
         gst_number = request.form.get('gst_number', '')
+        gst_number = gst_number.strip().upper()
         
         # If customer_id not provided for some reason, auto-generate one
         if not customer_id:
@@ -99,6 +100,11 @@ def add():
         # Validate required fields (customer_id, name, address and state)
         if not customer_id or not name or not address or not state:
             flash('Customer ID, Customer Name, Address and State are required!', 'error')
+            return redirect(url_for('customers.add'))
+
+        # Optional GST validation: must be exactly 15 characters if provided
+        if gst_number and len(gst_number) != 15:
+            flash('GST Number must be exactly 15 characters.', 'error')
             return redirect(url_for('customers.add'))
         
         with db_connection() as conn:
@@ -150,10 +156,16 @@ def update(customer_id):
             address = request.form.get('address', '')
             state = request.form.get('state', '')
             gst_number = request.form.get('gst_number', '')
+            gst_number = gst_number.strip().upper()
 
             # Validate required fields
             if not new_customer_id or not name or not address or not state:
                 flash('Customer ID, Customer Name, Address and State are required!', 'error')
+                return redirect(url_for('customers.update', customer_id=customer_id))
+
+            # Optional GST validation: must be exactly 15 characters if provided
+            if gst_number and len(gst_number) != 15:
+                flash('GST Number must be exactly 15 characters.', 'error')
                 return redirect(url_for('customers.update', customer_id=customer_id))
 
             # Check if new customer_id already exists (excluding current customer)

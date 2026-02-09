@@ -150,6 +150,33 @@
             color: #666;
             margin-top: 5px;
         }
+
+        .input-error {
+            border-color: #e74c3c !important;
+            box-shadow: 0 0 6px rgba(231,76,60,0.3);
+        }
+
+        .input-with-status {
+            position: relative;
+        }
+
+        .input-with-status input {
+            padding-right: 42px;
+        }
+
+        .status-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .status-icon.ok { color: #2ecc71; }
+        .status-icon.bad { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -224,10 +251,13 @@
                 
                 <div class="form-group">
                     <label for="gst_number">GST Number</label>
-                    <input type="text" id="gst_number" name="gst_number" 
-                           value="{{ customer['gst_number'] or '' }}"
-                           placeholder="Enter GST number" maxlength="15">
-                    <div class="help-text">15 character GST number (optional)</div>
+                    <div class="input-with-status">
+                        <input type="text" id="gst_number" name="gst_number" 
+                               value="{{ customer['gst_number'] or '' }}"
+                               placeholder="Enter GST number">
+                        <span id="gst_status_icon" class="status-icon" aria-hidden="true"></span>
+                    </div>
+                    <div class="help-text">15 character GST number (optional). Shows ✓ when valid and ✖ when invalid.</div>
                 </div>
             </div>
             
@@ -242,5 +272,66 @@
             </div>
         </form>
     </div>
+
+    <script>
+        (function() {
+            var gst = document.getElementById('gst_number');
+            var form = document.querySelector('form');
+
+            function checkGst() {
+                if (!gst) return true;
+                var icon = document.getElementById('gst_status_icon');
+                var value = (gst.value || '').trim();
+                var len = value.length;
+
+                if (value === '') {
+                    gst.classList.remove('input-error');
+                    if (icon) {
+                        icon.textContent = '';
+                        icon.classList.remove('ok', 'bad');
+                    }
+                    return true;
+                }
+
+                if (len === 15) {
+                    gst.classList.remove('input-error');
+                    if (icon) {
+                        icon.textContent = '✓';
+                        icon.classList.add('ok');
+                        icon.classList.remove('bad');
+                    }
+                    return true;
+                }
+
+                gst.classList.add('input-error');
+                if (icon) {
+                    icon.textContent = '✖';
+                    icon.classList.add('bad');
+                    icon.classList.remove('ok');
+                }
+                return false;
+            }
+
+            if (gst) {
+                gst.addEventListener('input', function() {
+                    gst.value = (gst.value || '').toUpperCase();
+                    checkGst();
+                });
+                gst.addEventListener('blur', checkGst);
+                gst.setAttribute('maxlength', '50');
+                checkGst();
+            }
+
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    if (!checkGst()) {
+                        e.preventDefault();
+                        alert('GST Number must be exactly 15 characters');
+                        if (gst) gst.focus();
+                    }
+                });
+            }
+        })();
+    </script>
 </body>
 </html>
