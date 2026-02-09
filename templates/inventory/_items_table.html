@@ -1,0 +1,107 @@
+{# Partial: inventory table + pagination + empty state (used by inventory/index.html and AJAX search) #}
+
+<!-- Pagination Controls (Top) -->
+{% if total_count > 0 %}
+    {% set route_name = 'inventory.index' %}
+    {% set extra_params = {} %}
+    {% if search_query %}
+        {% set _ = extra_params.update({'search': search_query}) %}
+    {% endif %}
+    {% include 'pagination.html' %}
+{% endif %}
+
+{% if items %}
+    <form id="deleteForm" method="POST" action="{{ url_for('inventory.delete_multiple') }}">
+        <table>
+            <thead>
+                <tr>
+                    <th class="checkbox-cell no-print">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                    </th>
+                    <th>ID</th>
+                    <th>Product ID</th>
+                    <th>Product Name</th>
+                    <th>HSN Code</th>
+                    <th>Mfg Date</th>
+                    <th>Expiry</th>
+                    <th>Quantity</th>
+                    <th>Buy Price (₹)</th>
+                    <th>Unit Price (₹)</th>
+                    <th>MRP (₹)</th>
+                    <th>GST (%)</th>
+                    <th>Last Updated</th>
+                    <th class="no-print">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td class="checkbox-cell no-print">
+                        <input type="checkbox" name="item_ids[]" value="{{ item['id'] }}" class="item-checkbox" onchange="updateSelection()">
+                    </td>
+                    <td>{{ item['id'] }}</td>
+                    <td><strong>{{ item['product_id'] }}</strong></td>
+                    <td><strong>{{ item['product_name'] }}</strong></td>
+                    <td>{{ item['hsn_code'] or 'N/A' }}</td>
+                    <td>
+                        {% if item['manufacture_date'] %}
+                            {% set date_parts = item['manufacture_date'].split('-') %}
+                            {% if date_parts|length == 3 %}
+                                {{ date_parts[1] }}/{{ date_parts[0] }}
+                            {% else %}
+                                {{ item['manufacture_date'] }}
+                            {% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item['expiry_month'] %}
+                            {% set parts = item['expiry_month'].split('-') %}
+                            {% if parts|length == 2 %}
+                                {{ parts[1] }}/{{ parts[0] }}
+                            {% else %}
+                                {{ item['expiry_month'] }}
+                            {% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="{% if item['quantity'] < 10 %}low-stock{% else %}in-stock{% endif %}">
+                            {{ item['quantity'] }}
+                        </span>
+                    </td>
+                    <td>₹{{ "%.4f"|format(item['buy_price']) }}</td>
+                    <td>₹{{ "%.4f"|format(item['unit_price']) }}</td>
+                    <td>₹{{ "%.4f"|format(item['mrp']) }}</td>
+                    <td>{{ "%.4f"|format(item['gst_percentage']) }}%</td>
+                    <td>{{ item['updated_at'] }}</td>
+                    <td class="no-print">
+                        <a href="{{ url_for('inventory.update', id=item['id']) }}"
+                           class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+
+    <!-- Pagination Controls (Bottom) -->
+    {% if total_count > 0 %}
+        {% set route_name = 'inventory.index' %}
+        {% set extra_params = {} %}
+        {% if search_query %}
+            {% set _ = extra_params.update({'search': search_query}) %}
+        {% endif %}
+        {% include 'pagination.html' %}
+    {% endif %}
+{% else %}
+    <div class="no-data">
+        {% if search_query %}
+            <p>No inventory items found for "{{ search_query }}".</p>
+        {% else %}
+            <p>No inventory items found. Click "Add Item" to get started!</p>
+        {% endif %}
+    </div>
+{% endif %}

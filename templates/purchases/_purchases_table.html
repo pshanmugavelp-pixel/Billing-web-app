@@ -1,0 +1,83 @@
+{# Partial: purchases table + pagination + empty state (used by purchases/index.html and AJAX search) #}
+
+<!-- Pagination Controls (Top) -->
+{% if total_count > 0 %}
+    {% set route_name = 'purchases.index' %}
+    {% set extra_params = {} %}
+    {% if search_query %}
+        {% set _ = extra_params.update({'search': search_query}) %}
+    {% endif %}
+    {% include 'pagination.html' %}
+{% endif %}
+
+{% if purchases %}
+    <table>
+        <thead>
+            <tr>
+                <th>Product ID</th>
+                <th>Product Name</th>
+                <th>HSN Code</th>
+                <th>Mfg Date</th>
+                <th>Expiry Month</th>
+                <th>Quantity</th>
+                <th>Buy Price (₹)</th>
+                <th>Unit Price (₹)</th>
+                <th>MRP (₹)</th>
+                <th>GST %</th>
+                <th>Purchase Date</th>
+                <th class="no-print">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for purchase in purchases %}
+            <tr>
+                <td>{{ purchase['product_id'] }}</td>
+                <td>{{ purchase['product_name'] }}</td>
+                <td>{{ purchase['hsn_code'] or 'N/A' }}</td>
+                <td>{{ purchase['manufacture_date'] or 'N/A' }}</td>
+                <td>
+                    {% if purchase['expiry_month'] %}
+                        {% set parts = purchase['expiry_month'].split('-') %}
+                        {% if parts|length == 2 %}
+                            {{ parts[1] }}/{{ parts[0] }}
+                        {% else %}
+                            {{ purchase['expiry_month'] }}
+                        {% endif %}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td>{{ purchase['quantity'] }}</td>
+                <td>₹{{ "%.4f"|format(purchase['buy_price']) }}</td>
+                <td>₹{{ "%.4f"|format(purchase['unit_price']) }}</td>
+                <td>₹{{ "%.4f"|format(purchase['mrp']) }}</td>
+                <td>{{ purchase['gst_percentage'] }}%</td>
+                <td>{{ purchase['purchase_date'] }}</td>
+                <td class="no-print">
+                    <a href="{{ url_for('purchases.delete', id=purchase['id']) }}" 
+                       class="btn btn-danger" 
+                       onclick="return confirm('Are you sure you want to delete this purchase record?')">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination Controls (Bottom) -->
+    {% if total_count > 0 %}
+        {% set route_name = 'purchases.index' %}
+        {% set extra_params = {} %}
+        {% if search_query %}
+            {% set _ = extra_params.update({'search': search_query}) %}
+        {% endif %}
+        {% include 'pagination.html' %}
+    {% endif %}
+{% else %}
+    <div class="no-data">
+        {% if search_query %}
+            <p>No purchases found for "{{ search_query }}".</p>
+        {% else %}
+            <p>No purchases found. Click "Add Purchase" to get started!</p>
+        {% endif %}
+    </div>
+{% endif %}

@@ -259,6 +259,16 @@
                 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary no-print">← Back to Dashboard</a>
             </div>
         </div>
+
+        <!-- Live Search Bar -->
+        <div style="margin: 20px 0;" class="no-print">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input id="searchInput" type="text" value="{{ search_query or '' }}"
+                       placeholder="Type to search Product Name or HSN Code..."
+                       style="flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                <button id="clearSearch" class="btn btn-secondary" style="padding: 10px 20px; display: none;">Clear</button>
+            </div>
+        </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -273,102 +283,10 @@
         <div id="selectionInfo" class="selection-info no-print">
             <span class="selection-text"><span id="selectedCount">0</span> item(s) selected</span>
         </div>
-        
-        <!-- Pagination Controls (Top) -->
-        {% if total_count > 0 %}
-            {% set route_name = 'inventory.index' %}
-            {% set extra_params = {} %}
-            {% include 'pagination.html' %}
-        {% endif %}
-        
-        {% if items %}
-            <form id="deleteForm" method="POST" action="{{ url_for('inventory.delete_multiple') }}">
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="checkbox-cell no-print">
-                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
-                            </th>
-                            <th>ID</th>
-                            <th>Product ID</th>
-                            <th>Product Name</th>
-                            <th>HSN Code</th>
-                            <th>Mfg Date</th>
-                            <th>Expiry</th>
-                            <th>Quantity</th>
-                            <th>Buy Price (₹)</th>
-                            <th>Unit Price (₹)</th>
-                            <th>MRP (₹)</th>
-                            <th>GST (%)</th>
-                            <th>Last Updated</th>
-                            <th class="no-print">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in items %}
-                        <tr>
-                            <td class="checkbox-cell no-print">
-                                <input type="checkbox" name="item_ids[]" value="{{ item['id'] }}" class="item-checkbox" onchange="updateSelection()">
-                            </td>
-                            <td>{{ item['id'] }}</td>
-                            <td><strong>{{ item['product_id'] }}</strong></td>
-                            <td><strong>{{ item['product_name'] }}</strong></td>
-                            <td>{{ item['hsn_code'] or 'N/A' }}</td>
-                            <td>
-                                {% if item['manufacture_date'] %}
-                                    {% set date_parts = item['manufacture_date'].split('-') %}
-                                    {% if date_parts|length == 3 %}
-                                        {{ date_parts[1] }}/{{ date_parts[0] }}
-                                    {% else %}
-                                        {{ item['manufacture_date'] }}
-                                    {% endif %}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if item['expiry_month'] %}
-                                    {% set parts = item['expiry_month'].split('-') %}
-                                    {% if parts|length == 2 %}
-                                        {{ parts[1] }}/{{ parts[0] }}
-                                    {% else %}
-                                        {{ item['expiry_month'] }}
-                                    {% endif %}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="{% if item['quantity'] < 10 %}low-stock{% else %}in-stock{% endif %}">
-                                    {{ item['quantity'] }}
-                                </span>
-                            </td>
-                            <td>₹{{ "%.4f"|format(item['buy_price']) }}</td>
-                            <td>₹{{ "%.4f"|format(item['unit_price']) }}</td>
-                            <td>₹{{ "%.4f"|format(item['mrp']) }}</td>
-                            <td>{{ "%.4f"|format(item['gst_percentage']) }}%</td>
-                            <td>{{ item['updated_at'] }}</td>
-                            <td class="no-print">
-                                <a href="{{ url_for('inventory.update', id=item['id']) }}"
-                                   class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Edit</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </form>
-            
-            <!-- Pagination Controls (Bottom) -->
-            {% if total_count > 0 %}
-                {% set route_name = 'inventory.index' %}
-                {% set extra_params = {} %}
-                {% include 'pagination.html' %}
-            {% endif %}
-        {% else %}
-            <div class="no-data">
-                <p>No inventory items found. Click "Add Item" to get started!</p>
-            </div>
-        {% endif %}
+
+        <div id="itemsTableContainer">
+            {% include 'inventory/_items_table.html' %}
+        </div>
     </div>
     
     <script>
@@ -467,6 +385,73 @@
             // Download file
             XLSX.writeFile(wb, filename);
         }
+
+        // Live search: server-side filter by Product Name and HSN Code
+        (function(){
+            var input = document.getElementById('searchInput');
+            var clearBtn = document.getElementById('clearSearch');
+            var container = document.getElementById('itemsTableContainer');
+            var itemCountEl = document.querySelector('.item-count');
+            var perPage = {{ per_page|default(20) }};
+            var debounceTimer = null;
+
+            function setCount(n) {
+                if (!itemCountEl) return;
+                itemCountEl.textContent = 'Total Items: ' + (n || 0);
+            }
+
+            function doSearch(){
+                if (!input || !container) return;
+                var q = (input.value || '').trim();
+                if (clearBtn) clearBtn.style.display = q ? 'inline-block' : 'none';
+
+                var params = new URLSearchParams();
+                params.set('per_page', String(perPage));
+                params.set('page', '1');
+                if (q) params.set('search', q);
+
+                fetch("{{ url_for('inventory.search_api') }}" + '?' + params.toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function(res){ return res.json(); })
+                .then(function(data){
+                    if (!data) return;
+                    if (typeof data.total_count !== 'undefined') setCount(data.total_count);
+                    if (typeof data.html === 'string') {
+                        container.innerHTML = data.html;
+                    }
+                    // selection UI may need a reset after DOM replacement
+                    if (document.getElementById('selectAll')) {
+                        try { updateSelection(); } catch (e) { /* ignore */ }
+                    }
+                })
+                .catch(function(){
+                    // Fail silently (network glitches) - keep current table
+                });
+            }
+
+            function queueSearch(){
+                if (debounceTimer) window.clearTimeout(debounceTimer);
+                debounceTimer = window.setTimeout(doSearch, 250);
+            }
+
+            if (input) {
+                input.addEventListener('input', queueSearch);
+                if (clearBtn) clearBtn.style.display = (input.value || '').trim() ? 'inline-block' : 'none';
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    if (!input) return;
+                    input.value = '';
+                    doSearch();
+                    input.focus();
+                });
+            }
+        })();
     </script>
 </body>
 </html>

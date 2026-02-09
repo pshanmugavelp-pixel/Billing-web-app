@@ -1,31 +1,37 @@
-"""
-Purchase routes module
+"""Purchase routes module
 Handles all purchase-related routes and inventory updates
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from database import db_connection
 from datetime import datetime
 
 purchases_bp = Blueprint('purchases', __name__, url_prefix='/purchases')
 
-@purchases_bp.route('/')
-def index():
-    """Display all purchases with pagination"""
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    
+
+def _build_purchases_index_context(*, search_query: str, page: int, per_page: int):
+    """Build template context for purchases index + AJAX partial search."""
     # Validate per_page values
     if per_page not in [10, 20, 50, 100]:
         per_page = 20
-    
+
     # Validate page number
     if page < 1:
         page = 1
-    
+
+    search_query = (search_query or '').strip()
+    params = []
+    where_clause = ''
+    if search_query:
+        like = f'%{search_query}%'
+        where_clause = 'WHERE product_name LIKE ? OR hsn_code LIKE ? OR purchase_date LIKE ?'
+        params.extend([like, like, like])
+
     with db_connection() as conn:
-        # Get total count
-        total_count = conn.execute('SELECT COUNT(*) as count FROM purchases').fetchone()['count']
+        total_count = conn.execute(
+            f'SELECT COUNT(*) as count FROM purchases {where_clause}',
+            params,
+        ).fetchone()['count']
 
         # Calculate pagination info
         total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
@@ -37,24 +43,51 @@ def index():
         # Calculate offset
         offset = (page - 1) * per_page
 
-        # Get paginated purchases
-        purchases = conn.execute('''
+        purchases = conn.execute(
+            f'''
             SELECT * FROM purchases
+            {where_clause}
             ORDER BY purchase_date DESC, created_at DESC
             LIMIT ? OFFSET ?
-        ''', (per_page, offset)).fetchall()
-    
+            ''',
+            (*params, per_page, offset),
+        ).fetchall()
+
     has_prev = page > 1
     has_next = page < total_pages
-    
-    return render_template('purchases/index.html',
-                         purchases=purchases,
-                         page=page,
-                         per_page=per_page,
-                         total_count=total_count,
-                         total_pages=total_pages,
-                         has_prev=has_prev,
-                         has_next=has_next)
+
+    return {
+        'purchases': purchases,
+        'search_query': search_query,
+        'page': page,
+        'per_page': per_page,
+        'total_count': total_count,
+        'total_pages': total_pages,
+        'has_prev': has_prev,
+        'has_next': has_next,
+    }
+
+
+@purchases_bp.route('/search')
+def search_api():
+    """AJAX endpoint: return filtered purchases table HTML + count for live search."""
+    search_query = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    context = _build_purchases_index_context(search_query=search_query, page=page, per_page=per_page)
+    html = render_template('purchases/_purchases_table.html', **context)
+    return jsonify({'html': html, 'total_count': context['total_count']})
+
+@purchases_bp.route('/')
+def index():
+    """Display all purchases with pagination and optional search"""
+    search_query = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    context = _build_purchases_index_context(search_query=search_query, page=page, per_page=per_page)
+    return render_template('purchases/index.html', **context)
 
 @purchases_bp.route('/add', methods=['GET', 'POST'])
 def add():
