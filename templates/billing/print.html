@@ -215,14 +215,22 @@ th {
 </tr>
 <tr>
     <td colspan="2" class="bill-address">
-        {{ bill['customer_name'] }}<br>
+        {{ bill['customer_name']|upper }}<br>
         {{ bill['address'] }}<br>
-        GST: {{ bill['gst_number'] or 'N/A' }}
+        <span style="color:#000;">Mob:</span> <span style="color:#000;">{{ bill['mobile'] or 'N/A' }}</span>
+        {% set cust_gst = (bill['gst_number'] or '')|trim %}
+        {% if cust_gst and cust_gst|lower != 'n/a' %}
+            <br>GSTIN: {{ cust_gst }}
+        {% endif %}
     </td>
     <td colspan="2" class="bill-address">
-        {{ bill['customer_name'] }}<br>
+        {{ bill['customer_name']|upper }}<br>
         {{ bill['address'] }}<br>
-        GST: {{ bill['gst_number'] or 'N/A' }}
+        <span style="color:#000;">Mob:</span> <span style="color:#000;">{{ bill['mobile'] or 'N/A' }}</span>
+        {% set cust_gst = (bill['gst_number'] or '')|trim %}
+        {% if cust_gst and cust_gst|lower != 'n/a' %}
+            <br>GSTIN: {{ cust_gst }}
+        {% endif %}
     </td>
     <th>Date</th>
     <td><strong>{{ bill['bill_date'] }}</strong></td>
