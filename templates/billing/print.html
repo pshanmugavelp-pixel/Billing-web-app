@@ -217,12 +217,15 @@ th {
     <td colspan="2" class="bill-address">
         {{ bill['customer_name'] }}<br>
         {{ bill['address'] }}<br>
-        GST: {{ bill['gst_number'] or 'N/A' }}
+        GST: {{ bill['gst_number'] or 'N/A' }}<br>
+        {{ bill['mobile'] }}
+
     </td>
     <td colspan="2" class="bill-address">
         {{ bill['customer_name'] }}<br>
         {{ bill['address'] }}<br>
-        GST: {{ bill['gst_number'] or 'N/A' }}
+        GST: {{ bill['gst_number'] or 'N/A' }}<br>
+        {{ bill['mobile'] }}
     </td>
     <th>Date</th>
     <td><strong>{{ bill['bill_date'] }}</strong></td>
