@@ -126,7 +126,7 @@ def create():
                         next_num = 1
                 else:
                     next_num = 1
-                bill_id = f'ST{next_num}'
+                bill_id = f'ST{next_num:04d}'
             else:
                 # Manual mode - validate uniqueness
                 existing = conn.execute('SELECT id FROM billing WHERE bill_id = ?', (bill_id,)).fetchone()
