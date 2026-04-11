@@ -166,6 +166,31 @@
             gap: 10px;
             flex-wrap: wrap;
         }
+
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-form label {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .filter-form input[type="date"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+            color: #333;
+        }
+
+        .filter-form .btn {
+            margin-top: 0;
+        }
         
         .status-badge {
             padding: 5px 10px;
@@ -214,6 +239,14 @@
                 <h1>📊 Active Bills Export with Item Details</h1>
                 <p class="bill-count">Total Active Bills: {{ bills_with_items|length }}</p>
             </div>
+            <form class="filter-form no-print" method="get" action="{{ url_for('billing.active_bills_export') }}">
+                <label for="fromDate">From Date</label>
+                <input type="date" id="fromDate" name="from_date" value="{{ from_date }}">
+                <label for="toDate">To Date</label>
+                <input type="date" id="toDate" name="to_date" value="{{ to_date }}">
+                <button type="submit" class="btn btn-info">Apply Filter</button>
+                <a href="{{ url_for('billing.active_bills_export') }}" class="btn btn-secondary">Reset</a>
+            </form>
             <div class="button-group">
                 <button onclick="downloadExcel()" class="btn btn-success no-print">📥 Download Excel</button>
                 <button onclick="window.print()" class="btn btn-info no-print">🖨️ Print</button>
@@ -224,9 +257,13 @@
         
         <div class="info-box no-print">
             <p><strong>ℹ️ About this page:</strong></p>
-            <p>This page displays all active bills with complete item-level details including item name, HSN code, quantity, unit price, and tax breakdowns (IGST, SGST, CGST).</p>
+            <p>This page displays active bills with complete item-level details including item name, HSN code, quantity, unit price, and tax breakdowns (IGST, SGST, CGST).</p>
             <p>Each bill's items are shown as separate rows for detailed analysis.</p>
-            <p>Click "Download Excel" to export all data to a spreadsheet file.</p>
+            {% if from_date or to_date %}
+                <p>Showing bills from <strong>{{ from_date or 'the beginning' }}</strong> to <strong>{{ to_date or 'today' }}</strong>.</p>
+            {% else %}
+                <p>Click "Download Excel" to export all active bills to a spreadsheet file.</p>
+            {% endif %}
         </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -277,10 +314,12 @@
                             {% if bill_items and bill_items|length > 0 %}
                                 {% for item in bill_items %}
                                 <tr class="item-row">
-                                    <td>{{ bill.bill_id }}</td>
-                                    <td>{{ bill.bill_date }}</td>
-                                    <td>{{ bill.customer_name }}</td>
-                                    <td>{{ bill.customer_gst or 'N/A' }}</td>
+                                    {% if loop.first %}
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.bill_id }}/{{ bill.financial_year }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.bill_date }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.customer_name }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.customer_gst or 'N/A' }}</td>
+                                    {% endif %}
                                     <td>{{ item.product_name }}</td>
                                     <td>{{ item.hsn_code or 'N/A' }}</td>
                                     <td>{{ item.quantity }}</td>
@@ -290,26 +329,28 @@
                                     <td>{{ "%.2f"|format(item.sgst) }}</td>
                                     <td>{{ "%.2f"|format(item.cgst) }}</td>
                                     <td>{{ "%.2f"|format(item.total) }}</td>
-                                    <td>{{ "%.2f"|format(bill.subtotal) }}</td>
-                                    <td>{{ "%.2f"|format(bill.gst_amount) }}</td>
-                                    <td>{{ "%.2f"|format(bill.total_amount) }}</td>
-                                    <td>
-                                        <span class="status-badge status-{{ bill.payment_status|lower }}">
-                                            {{ bill.payment_status }}
-                                        </span>
-                                    </td>
-                                    <td>{{ bill.customer_id }}</td>
-                                    <td>{{ bill.vendor_code or 'N/A' }}</td>
-                                    <td>{{ bill.email or 'N/A' }}</td>
-                                    <td>{{ bill.mobile or 'N/A' }}</td>
-                                    <td>{{ bill.address or 'N/A' }}</td>
-                                    <td>{{ bill.state or 'N/A' }}</td>
-                                    <td>{{ bill.notes or '' }}</td>
+                                    {% if loop.first %}
+                                        <td rowspan="{{ bill_items|length }}">{{ "%.2f"|format(bill.subtotal) }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ "%.2f"|format(bill.gst_amount) }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ "%.2f"|format(bill.total_amount) }}</td>
+                                        <td rowspan="{{ bill_items|length }}">
+                                            <span class="status-badge status-{{ bill.payment_status|lower }}">
+                                                {{ bill.payment_status }}
+                                            </span>
+                                        </td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.customer_id }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.vendor_code or 'N/A' }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.email or 'N/A' }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.mobile or 'N/A' }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.address or 'N/A' }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.state or 'N/A' }}</td>
+                                        <td rowspan="{{ bill_items|length }}">{{ bill.notes or '' }}</td>
+                                    {% endif %}
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr class="item-row">
-                                    <td>{{ bill.bill_id }}</td>
+                                    <td>{{ bill.bill_id }}/{{ bill.financial_year }}</td>
                                     <td>{{ bill.bill_date }}</td>
                                     <td>{{ bill.customer_name }}</td>
                                     <td>{{ bill.customer_gst or 'N/A' }}</td>
@@ -355,26 +396,182 @@
             });
             rows.push(headers);
             
-            // Get data rows
+            // Get data rows, maintaining merged display for Excel
+            let currentBillData = null;
+            let isFirstItemRow = true;
+            let currentRowIndex = 1; // Start after header row
+            let mergeRanges = [];
+            let billStartRow = null;
+            let billItemCount = 0;
+            
             table.querySelectorAll('tbody tr').forEach(tr => {
                 const row = [];
-                tr.querySelectorAll('td').forEach(td => {
-                    // Remove currency symbols and clean text
-                    let text = td.textContent.trim();
-                    // Remove ₹ symbol and % symbol for numeric columns
-                    text = text.replace('₹', '').replace('%', '');
-                    row.push(text);
-                });
+                const cells = tr.querySelectorAll('td');
+                
+                if (cells.length === 24) {
+                    // Full row with bill data (first item of multi-item bill)
+                    // First, add merge range for previous bill if it had multiple items
+                    if (billStartRow !== null && billItemCount > 1) {
+                        const billColumns = [0, 1, 2, 3, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+                        billColumns.forEach(col => {
+                            mergeRanges.push({
+                                s: { r: billStartRow, c: col }, // Start: row, column
+                                e: { r: billStartRow + billItemCount - 1, c: col } // End: row, column
+                            });
+                        });
+                    }
+                    
+                    cells.forEach((td, index) => {
+                        let text = td.textContent.trim();
+                        // Remove currency symbols and clean text
+                        text = text.replace('₹', '').replace('%', '');
+                        
+                        // Convert numeric columns to numbers
+                        if ([6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(index)) {
+                            const numValue = parseFloat(text.replace(/,/g, ''));
+                            if (!isNaN(numValue)) {
+                                row.push(numValue);
+                            } else {
+                                row.push(text);
+                            }
+                        } else {
+                            row.push(text);
+                        }
+                    });
+                    currentBillData = row.slice(0, 4).concat(row.slice(13)); // Store bill-level data (15 columns)
+                    billStartRow = currentRowIndex;
+                    billItemCount = 1;
+                    isFirstItemRow = false;
+                } else if (cells.length === 16) {
+                    // "No items" row - add merge range for previous bill if needed
+                    if (billStartRow !== null && billItemCount > 1) {
+                        const billColumns = [0, 1, 2, 3, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+                        billColumns.forEach(col => {
+                            mergeRanges.push({
+                                s: { r: billStartRow, c: col },
+                                e: { r: billStartRow + billItemCount - 1, c: col }
+                            });
+                        });
+                    }
+                    
+                    let cellIndex = 0;
+                    // Bill columns 0-3
+                    for (let i = 0; i < 4; i++) {
+                        let text = cells[cellIndex++].textContent.trim();
+                        text = text.replace('₹', '').replace('%', '');
+                        row.push(text);
+                    }
+                    // Item columns 4-12: "No items"
+                    for (let i = 0; i < 9; i++) {
+                        row.push('No items');
+                    }
+                    // Bill columns 13-23
+                    for (let i = 0; i < 11; i++) {
+                        let text = cells[cellIndex++].textContent.trim();
+                        text = text.replace('₹', '').replace('%', '');
+                        
+                        // Convert numeric columns to numbers (indices 0-2 in this loop correspond to columns 13-15)
+                        if ([0, 1, 2].includes(i)) {
+                            const numValue = parseFloat(text.replace(/,/g, ''));
+                            if (!isNaN(numValue)) {
+                                row.push(numValue);
+                            } else {
+                                row.push(text);
+                            }
+                        } else {
+                            row.push(text);
+                        }
+                    }
+                    currentBillData = row.slice(0, 4).concat(row.slice(13)); // Store bill-level data
+                    billStartRow = null; // No merging for single item bills
+                    isFirstItemRow = true;
+                } else {
+                    // Item row - create merged display effect
+                    const itemData = [];
+                    cells.forEach(td => {
+                        let text = td.textContent.trim();
+                        text = text.replace('₹', '').replace('%', '');
+                        itemData.push(text);
+                    });
+                    
+                    if (isFirstItemRow) {
+                        // First item row: include bill data
+                        const fullRow = [];
+                        
+                        // Add bill columns 0-3
+                        fullRow.push(...currentBillData.slice(0, 4));
+                        
+                        // Add item columns 4-12 with number conversion
+                        itemData.forEach((value, itemIndex) => {
+                            if ([2, 3, 4, 5, 6, 7, 8].includes(itemIndex)) { // Columns 6-12
+                                const numValue = parseFloat(String(value).replace(/,/g, ''));
+                                if (!isNaN(numValue)) {
+                                    fullRow.push(numValue);
+                                } else {
+                                    fullRow.push(value);
+                                }
+                            } else {
+                                fullRow.push(value);
+                            }
+                        });
+                        
+                        // Add bill columns 13-23 with number conversion
+                        currentBillData.slice(4).forEach((value, billIndex) => {
+                            if ([0, 1, 2].includes(billIndex)) { // Columns 13-15
+                                const numValue = parseFloat(String(value).replace(/,/g, ''));
+                                if (!isNaN(numValue)) {
+                                    fullRow.push(numValue);
+                                } else {
+                                    fullRow.push(value);
+                                }
+                            } else {
+                                fullRow.push(value);
+                            }
+                        });
+                        
+                        row.push(...fullRow);
+                        billStartRow = currentRowIndex;
+                        billItemCount = 1;
+                        isFirstItemRow = false;
+                    } else {
+                        // Subsequent item rows: empty bill columns for merged effect
+                        row.push('', '', '', '', ...itemData.map((value, itemIndex) => {
+                            if ([2, 3, 4, 5, 6, 7, 8].includes(itemIndex)) { // Columns 6-12
+                                const numValue = parseFloat(String(value).replace(/,/g, ''));
+                                return !isNaN(numValue) ? numValue : value;
+                            }
+                            return value;
+                        }), '', '', '', '', '', '', '', '', '', '', '');
+                        billItemCount++;
+                    }
+                }
                 rows.push(row);
+                currentRowIndex++;
             });
+            
+            // Add merge range for the last bill if it had multiple items
+            if (billStartRow !== null && billItemCount > 1) {
+                const billColumns = [0, 1, 2, 3, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+                billColumns.forEach(col => {
+                    mergeRanges.push({
+                        s: { r: billStartRow, c: col },
+                        e: { r: billStartRow + billItemCount - 1, c: col }
+                    });
+                });
+            }
             
             // Create workbook and worksheet
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(rows);
             
+            // Apply merge ranges
+            if (mergeRanges.length > 0) {
+                ws['!merges'] = mergeRanges;
+            }
+            
             // Set column widths
             ws['!cols'] = [
-                {wch: 12},  // Bill ID
+                {wch: 15},  // Bill ID (increased for financial year suffix)
                 {wch: 12},  // Bill Date
                 {wch: 25},  // Customer Name
                 {wch: 20},  // Customer GST
@@ -402,9 +599,15 @@
             
             XLSX.utils.book_append_sheet(wb, ws, 'Active Bills with Items');
             
-            // Generate filename with current date
+            // Generate filename with current date and optional filter range
+            const fromDate = document.getElementById('fromDate')?.value || '';
+            const toDate = document.getElementById('toDate')?.value || '';
             const date = new Date().toISOString().split('T')[0];
-            const filename = `active_bills_items_export_${date}.xlsx`;
+            const filenameParts = ['active_bills_items_export'];
+            if (fromDate) filenameParts.push(`from_${fromDate}`);
+            if (toDate) filenameParts.push(`to_${toDate}`);
+            filenameParts.push(date);
+            const filename = `${filenameParts.join('_')}.xlsx`;
             
             // Download file
             XLSX.writeFile(wb, filename);

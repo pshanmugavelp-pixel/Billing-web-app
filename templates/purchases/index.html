@@ -192,6 +192,16 @@
                 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary no-print">← Back to Dashboard</a>
             </div>
         </div>
+
+        <!-- Live Search Bar -->
+        <div style="margin: 20px 0;" class="no-print">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input id="searchInput" type="text" value="{{ search_query or '' }}"
+                      placeholder="Type to search Product Name, HSN Code, or Purchase Date (YYYY-MM-DD)..."
+                       style="flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                <button id="clearSearch" class="btn btn-secondary" style="padding: 10px 20px; display: none;">Clear</button>
+            </div>
+        </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -203,77 +213,10 @@
             {% endif %}
         {% endwith %}
         
-        <!-- Pagination Controls (Top) -->
-        {% if total_count > 0 %}
-            {% set route_name = 'purchases.index' %}
-            {% set extra_params = {} %}
-            {% include 'pagination.html' %}
-        {% endif %}
-        
-        {% if purchases %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product ID</th>
-                        <th>Product Name</th>
-                        <th>HSN Code</th>
-                        <th>Mfg Date</th>
-                        <th>Expiry Month</th>
-                        <th>Quantity</th>
-                        <th>Buy Price (₹)</th>
-                        <th>Unit Price (₹)</th>
-                        <th>MRP (₹)</th>
-                        <th>GST %</th>
-                        <th>Purchase Date</th>
-                        <th class="no-print">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for purchase in purchases %}
-                    <tr>
-                        <td>{{ purchase['product_id'] }}</td>
-                        <td>{{ purchase['product_name'] }}</td>
-                        <td>{{ purchase['hsn_code'] or 'N/A' }}</td>
-                        <td>{{ purchase['manufacture_date'] or 'N/A' }}</td>
-                        <td>
-                            {% if purchase['expiry_month'] %}
-                                {% set parts = purchase['expiry_month'].split('-') %}
-                                {% if parts|length == 2 %}
-                                    {{ parts[1] }}/{{ parts[0] }}
-                                {% else %}
-                                    {{ purchase['expiry_month'] }}
-                                {% endif %}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </td>
-                        <td>{{ purchase['quantity'] }}</td>
-                        <td>₹{{ "%.4f"|format(purchase['buy_price']) }}</td>
-                        <td>₹{{ "%.4f"|format(purchase['unit_price']) }}</td>
-                        <td>₹{{ "%.4f"|format(purchase['mrp']) }}</td>
-                        <td>{{ purchase['gst_percentage'] }}%</td>
-                        <td>{{ purchase['purchase_date'] }}</td>
-                        <td class="no-print">
-                            <a href="{{ url_for('purchases.delete', id=purchase['id']) }}" 
-                               class="btn btn-danger" 
-                               onclick="return confirm('Are you sure you want to delete this purchase record?')">Delete</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            
-            <!-- Pagination Controls (Bottom) -->
-            {% if total_count > 0 %}
-                {% set route_name = 'purchases.index' %}
-                {% set extra_params = {} %}
-                {% include 'pagination.html' %}
-            {% endif %}
-        {% else %}
-            <div class="no-data">
-                <p>No purchases found. Click "Add Purchase" to get started!</p>
-            </div>
-        {% endif %}
+
+        <div id="purchasesTableContainer">
+            {% include 'purchases/_purchases_table.html' %}
+        </div>
     </div>
     
     <script>
@@ -329,6 +272,69 @@
             // Download file
             XLSX.writeFile(wb, filename);
         }
+
+        // Live search: server-side filter by Product Name and HSN Code
+        (function(){
+            var input = document.getElementById('searchInput');
+            var clearBtn = document.getElementById('clearSearch');
+            var container = document.getElementById('purchasesTableContainer');
+            var countEl = document.querySelector('.purchase-count');
+            var perPage = {{ per_page|default(20) }};
+            var debounceTimer = null;
+
+            function setCount(n) {
+                if (!countEl) return;
+                countEl.textContent = 'Total Purchases: ' + (n || 0);
+            }
+
+            function doSearch(){
+                if (!input || !container) return;
+                var q = (input.value || '').trim();
+                if (clearBtn) clearBtn.style.display = q ? 'inline-block' : 'none';
+
+                var params = new URLSearchParams();
+                params.set('per_page', String(perPage));
+                params.set('page', '1');
+                if (q) params.set('search', q);
+
+                fetch("{{ url_for('purchases.search_api') }}" + '?' + params.toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function(res){ return res.json(); })
+                .then(function(data){
+                    if (!data) return;
+                    if (typeof data.total_count !== 'undefined') setCount(data.total_count);
+                    if (typeof data.html === 'string') {
+                        container.innerHTML = data.html;
+                    }
+                })
+                .catch(function(){
+                    // Fail silently - keep current table
+                });
+            }
+
+            function queueSearch(){
+                if (debounceTimer) window.clearTimeout(debounceTimer);
+                debounceTimer = window.setTimeout(doSearch, 250);
+            }
+
+            if (input) {
+                input.addEventListener('input', queueSearch);
+                if (clearBtn) clearBtn.style.display = (input.value || '').trim() ? 'inline-block' : 'none';
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    if (!input) return;
+                    input.value = '';
+                    doSearch();
+                    input.focus();
+                });
+            }
+        })();
     </script>
 </body>
 </html>

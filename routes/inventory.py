@@ -10,51 +10,77 @@ from dateutil.relativedelta import relativedelta
 
 inventory_bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 
-@inventory_bp.route('/')
-def index():
-    """Display all inventory items with pagination"""
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    
+
+def _build_inventory_index_context(*, search_query: str, page: int, per_page: int):
+    """Build template context for inventory index + AJAX partial search."""
     # Validate per_page values
     if per_page not in [10, 20, 50, 100]:
         per_page = 20
-    
+
     # Validate page number
     if page < 1:
         page = 1
-    
+
+    search_query = (search_query or '').strip()
+    params = []
+    where_clause = ''
+    if search_query:
+        like = f'%{search_query}%'
+        where_clause = 'WHERE product_name LIKE ? OR hsn_code LIKE ?'
+        params.extend([like, like])
+
     with db_connection() as conn:
-        # Get total count
-        total_count = conn.execute('SELECT COUNT(*) as count FROM inventory').fetchone()['count']
+        total_count = conn.execute(
+            f'SELECT COUNT(*) as count FROM inventory {where_clause}',
+            params,
+        ).fetchone()['count']
 
-        # Calculate pagination info
         total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
-
-        # Ensure page doesn't exceed total_pages
         if page > total_pages:
             page = total_pages
 
-        # Calculate offset
         offset = (page - 1) * per_page
 
-        # Get paginated items
         items = conn.execute(
-            'SELECT * FROM inventory ORDER BY created_at DESC LIMIT ? OFFSET ?',
-            (per_page, offset)
+            f'SELECT * FROM inventory {where_clause} ORDER BY created_at DESC LIMIT ? OFFSET ?',
+            (*params, per_page, offset),
         ).fetchall()
-    
+
     has_prev = page > 1
     has_next = page < total_pages
-    
-    return render_template('inventory/index.html',
-                         items=items,
-                         page=page,
-                         per_page=per_page,
-                         total_count=total_count,
-                         total_pages=total_pages,
-                         has_prev=has_prev,
-                         has_next=has_next)
+
+    return {
+        'items': items,
+        'search_query': search_query,
+        'page': page,
+        'per_page': per_page,
+        'total_count': total_count,
+        'total_pages': total_pages,
+        'has_prev': has_prev,
+        'has_next': has_next,
+    }
+
+
+@inventory_bp.route('/search')
+def search_api():
+    """AJAX endpoint: return filtered inventory table HTML + count for live search."""
+    search_query = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    context = _build_inventory_index_context(search_query=search_query, page=page, per_page=per_page)
+    html = render_template('inventory/_items_table.html', **context)
+    return jsonify({'html': html, 'total_count': context['total_count']})
+
+@inventory_bp.route('/')
+def index():
+    """Display all inventory items with pagination and optional search"""
+    search_query = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    context = _build_inventory_index_context(search_query=search_query, page=page, per_page=per_page)
+    return render_template('inventory/index.html', **context)
 
 @inventory_bp.route('/api/products')
 def api_products():

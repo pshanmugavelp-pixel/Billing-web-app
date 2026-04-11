@@ -294,6 +294,16 @@
                 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary no-print">← Back to Dashboard</a>
             </div>
         </div>
+
+        <!-- Live Search Bar -->
+        <div style="margin: 20px 0;" class="no-print">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input id="searchInput" type="text" value="{{ search_query or '' }}"
+                       placeholder="Type to search Customer Name, Bill ID, or Bill Date (YYYY-MM-DD)..."
+                       style="flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+                <button id="clearSearch" class="btn btn-secondary" style="padding: 10px 20px; display: none;">Clear</button>
+            </div>
+        </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -308,84 +318,10 @@
         <div id="selectionInfo" class="selection-info no-print">
             <span class="selection-text"><span id="selectedCount">0</span> bill(s) selected</span>
         </div>
-        
-        <!-- Pagination Controls (Top) -->
-        {% if total_count > 0 %}
-            {% set route_name = 'billing.index' %}
-            {% set extra_params = {'show_cancelled': 'true' if show_cancelled else 'false'} %}
-            {% include 'pagination.html' %}
-        {% endif %}
-        
-        {% if bills %}
-            <form id="cancelForm" method="POST" action="{{ url_for('billing.cancel_bills_confirm') }}">
-                <table>
-                    <thead>
-                        <tr>
-                            {% if not show_cancelled %}
-                            <th class="checkbox-cell no-print">
-                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
-                            </th>
-                            {% endif %}
-                            <th>Bill ID</th>
-                            <th>Customer Name</th>
-                            <th>Items</th>
-                            <th>Bill Date</th>
-                            <th>Total Amount (₹)</th>
-                            <th>Payment Status</th>
-                            <th>Payment Method</th>
-                            <th>Created Date</th>
-                            <th class="no-print">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for bill in bills %}
-                        <tr>
-                            {% if not show_cancelled %}
-                            <td class="checkbox-cell no-print">
-                                <input type="checkbox" name="bill_ids[]" value="{{ bill['id'] }}" class="bill-checkbox" onchange="updateSelection()">
-                            </td>
-                            {% endif %}
-                            <td>{{ bill['bill_id'] }}</td>
-                            <td>{{ bill['customer_name'] }}</td>
-                            <td>{{ bill['item_count'] }} item(s)</td>
-                            <td>{{ bill['bill_date'] }}</td>
-                            <td>₹{{ "%.2f"|format(bill['total_amount']) }}</td>
-                            <td>
-                                <span class="status-badge status-{{ bill['payment_status']|lower }}">
-                                    {{ bill['payment_status'] }}
-                                </span>
-                            </td>
-                            <td>{{ bill['payment_method'] or 'N/A' }}</td>
-                            <td>{{ bill['created_at'] }}</td>
-                            <td class="no-print">
-                                <div style="display: flex; gap: 5px;">
-                                    <a href="{{ url_for('billing.view', id=bill['id']) }}" class="btn btn-info" style="padding: 6px 12px; font-size: 12px;">View</a>
-                                    {% if bill['payment_status'] != 'Cancelled' %}
-                                    <a href="{{ url_for('billing.update', bill_id=bill['id']) }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; background: #f39c12;">Edit</a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </form>
-            
-            <!-- Pagination Controls (Bottom) -->
-            {% if total_count > 0 %}
-                {% set route_name = 'billing.index' %}
-                {% set extra_params = {'show_cancelled': 'true' if show_cancelled else 'false'} %}
-                {% include 'pagination.html' %}
-            {% endif %}
-        {% else %}
-            <div class="no-data">
-                {% if show_cancelled %}
-                <p>No cancelled bills found.</p>
-                {% else %}
-                <p>No bills found. Click "Create Bill" to get started!</p>
-                {% endif %}
-            </div>
-        {% endif %}
+
+        <div id="billsTableContainer">
+            {% include 'billing/_bills_table.html' %}
+        </div>
     </div>
     
     <script>
@@ -497,6 +433,76 @@
             // Download file
             XLSX.writeFile(wb, filename);
         }
+
+        // Live search: server-side filter by Bill ID, Customer Name, Bill Date
+        (function(){
+            var input = document.getElementById('searchInput');
+            var clearBtn = document.getElementById('clearSearch');
+            var container = document.getElementById('billsTableContainer');
+            var billCountEl = document.querySelector('.bill-count');
+            var showCancelled = {{ 'true' if show_cancelled else 'false' }};
+            var perPage = {{ per_page|default(20) }};
+            var debounceTimer = null;
+
+            function setCount(n) {
+                if (!billCountEl) return;
+                billCountEl.textContent = 'Total Bills: ' + (n || 0);
+            }
+
+            function doSearch(){
+                if (!input || !container) return;
+                var q = (input.value || '').trim();
+                if (clearBtn) clearBtn.style.display = q ? 'inline-block' : 'none';
+
+                var params = new URLSearchParams();
+                params.set('show_cancelled', showCancelled ? 'true' : 'false');
+                params.set('per_page', String(perPage));
+                params.set('page', '1');
+                if (q) params.set('search', q);
+
+                fetch("{{ url_for('billing.search_api') }}" + '?' + params.toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function(res){ return res.json(); })
+                .then(function(data){
+                    if (!data) return;
+                    if (typeof data.total_count !== 'undefined') setCount(data.total_count);
+                    if (typeof data.html === 'string') {
+                        container.innerHTML = data.html;
+                    }
+                    // selection UI may need a reset after DOM replacement
+                    if (document.getElementById('selectAll')) {
+                        try { updateSelection(); } catch (e) { /* ignore */ }
+                    }
+                })
+                .catch(function(){
+                    // Fail silently (network glitches) - keep current table
+                });
+            }
+
+            function queueSearch(){
+                if (debounceTimer) window.clearTimeout(debounceTimer);
+                debounceTimer = window.setTimeout(doSearch, 250);
+            }
+
+            if (input) {
+                input.addEventListener('input', queueSearch);
+                // initial state
+                if (clearBtn) clearBtn.style.display = (input.value || '').trim() ? 'inline-block' : 'none';
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    if (!input) return;
+                    input.value = '';
+                    doSearch();
+                    input.focus();
+                });
+            }
+        })();
     </script>
 </body>
 </html>

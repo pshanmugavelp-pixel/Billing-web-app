@@ -215,9 +215,12 @@
                 
                 <div class="form-group">
                     <label for="gst_number">GST Number</label>
-                          <input type="text" id="gst_number" name="gst_number" autocomplete="off"
-                              placeholder="Enter GST number">
-                    <div class="help-text">15 character GST number (optional). Typing more than 15 will beep and highlight.</div>
+                    <div class="input-with-status">
+                        <input type="text" id="gst_number" name="gst_number" autocomplete="off"
+                            placeholder="Enter GST number">
+                        <span id="gst_status_icon" class="status-icon" aria-hidden="true"></span>
+                    </div>
+                    <div class="help-text">15 character GST number (optional). Shows ✓ when valid and ✖ when invalid.</div>
                 </div>
             </div>
             
@@ -238,6 +241,28 @@
             box-shadow: 0 0 6px rgba(231,76,60,0.3);
             animation: pulse 0.6s ease-in-out 0s 2;
         }
+
+        .input-with-status {
+            position: relative;
+        }
+
+        .input-with-status input {
+            padding-right: 42px;
+        }
+
+        .status-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .status-icon.ok { color: #2ecc71; }
+        .status-icon.bad { color: #e74c3c; }
 
         @keyframes pulse {
             0% { transform: translateY(0); }
@@ -293,22 +318,34 @@
 
             function checkGst() {
                 if (!gst) return;
-                var digits = (gst.value || '').replace(/\D/g, '');
-                var len = digits.length;
-                var excess = Math.max(0, len - 10);
-                var prevExcess = Math.max(0, prev_gst_digits - 10);
+                var icon = document.getElementById('gst_status_icon');
+                var value = (gst.value || '').trim();
+                var len = value.length;
 
-                if (excess > 0) {
-                    var times = Math.max(0, excess - prevExcess);
-                    for (let i = 0; i < times; i++) {
-                        setTimeout(playBeep, i * 120);
-                    }
-                    gst.classList.add('input-error');
-                } else {
+                if (value === '') {
                     gst.classList.remove('input-error');
+                    if (icon) {
+                        icon.textContent = '';
+                        icon.classList.remove('ok', 'bad');
+                    }
+                    return;
                 }
 
-                prev_gst_digits = len;
+                if (len === 15) {
+                    gst.classList.remove('input-error');
+                    if (icon) {
+                        icon.textContent = '✓';
+                        icon.classList.add('ok');
+                        icon.classList.remove('bad');
+                    }
+                } else {
+                    gst.classList.add('input-error');
+                    if (icon) {
+                        icon.textContent = '✖';
+                        icon.classList.add('bad');
+                        icon.classList.remove('ok');
+                    }
+                }
             }
 
             if (mobile) {
@@ -317,12 +354,13 @@
             }
 
             if (gst) {
-                gst.addEventListener('input', checkGst);
-                gst.setAttribute('maxlength', '30');
-                // Convert GST input to uppercase
                 gst.addEventListener('input', function(){
-                    gst.value = gst.value.toUpperCase();
+                    gst.value = (gst.value || '').toUpperCase();
+                    checkGst();
                 });
+                gst.addEventListener('blur', checkGst);
+                gst.setAttribute('maxlength', '50');
+                checkGst();
             }
 
             // Basic client-side required-field guard before submit
@@ -331,13 +369,27 @@
                 form.addEventListener('submit', function(e){
                     var addr = document.getElementById('address');
                     var st = document.getElementById('state');
+                    var gstInput = document.getElementById('gst_number');
                     var problems = [];
                     if (!addr || !addr.value.trim()) problems.push('Address is required');
                     if (!st || !st.value.trim()) problems.push('State is required');
+
+                    if (gstInput) {
+                        var gstVal = (gstInput.value || '').trim();
+                        if (gstVal !== '' && gstVal.length !== 15) {
+                            problems.push('GST Number must be exactly 15 characters');
+                            gstInput.classList.add('input-error');
+                            checkGst();
+                        }
+                    }
                     if (problems.length) {
                         e.preventDefault();
                         alert(problems.join('\n'));
-                        if (addr) addr.focus();
+                        if (gstInput && (gstInput.value || '').trim() && (gstInput.value || '').trim().length !== 15) {
+                            gstInput.focus();
+                        } else if (addr) {
+                            addr.focus();
+                        }
                     }
                 });
             }

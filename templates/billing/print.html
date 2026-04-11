@@ -215,14 +215,14 @@ th {
 </tr>
 <tr>
     <td colspan="2" class="bill-address">
-        {{ bill['customer_name'] }}<br>
+        {{ bill['customer_name']|upper }}<br>
         {{ bill['address'] }}<br>
         GST: {{ bill['gst_number'] or 'N/A' }}<br>
         {{ bill['mobile'] }}
 
     </td>
     <td colspan="2" class="bill-address">
-        {{ bill['customer_name'] }}<br>
+        {{ bill['customer_name']|upper }}<br>
         {{ bill['address'] }}<br>
         GST: {{ bill['gst_number'] or 'N/A' }}<br>
         {{ bill['mobile'] }}

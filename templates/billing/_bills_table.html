@@ -1,0 +1,87 @@
+{# Partial: bills table + pagination + empty state (used by billing/index.html and AJAX search) #}
+
+<!-- Pagination Controls (Top) -->
+{% if total_count > 0 %}
+    {% set route_name = 'billing.index' %}
+    {% set extra_params = {'show_cancelled': 'true' if show_cancelled else 'false'} %}
+    {% if search_query %}
+        {% set _ = extra_params.update({'search': search_query}) %}
+    {% endif %}
+    {% include 'pagination.html' %}
+{% endif %}
+
+{% if bills %}
+    <form id="cancelForm" method="POST" action="{{ url_for('billing.cancel_bills_confirm') }}">
+        <table>
+            <thead>
+                <tr>
+                    {% if not show_cancelled %}
+                    <th class="checkbox-cell no-print">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                    </th>
+                    {% endif %}
+                    <th>Bill ID</th>
+                    <th>Customer Name</th>
+                    <th>Items</th>
+                    <th>Bill Date</th>
+                    <th>Total Amount (₹)</th>
+                    <th>Payment Status</th>
+                    <th>Payment Method</th>
+                    <th>Created Date</th>
+                    <th class="no-print">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bill in bills %}
+                <tr>
+                    {% if not show_cancelled %}
+                    <td class="checkbox-cell no-print">
+                        <input type="checkbox" name="bill_ids[]" value="{{ bill['id'] }}" class="bill-checkbox" onchange="updateSelection()">
+                    </td>
+                    {% endif %}
+                    <td>{{ bill['bill_id'] }}</td>
+                    <td>{{ bill['customer_name'] }}</td>
+                    <td>{{ bill['item_count'] }} item(s)</td>
+                    <td>{{ bill['bill_date'] }}</td>
+                    <td>₹{{ "%.2f"|format(bill['total_amount']) }}</td>
+                    <td>
+                        <span class="status-badge status-{{ bill['payment_status']|lower }}">
+                            {{ bill['payment_status'] }}
+                        </span>
+                    </td>
+                    <td>{{ bill['payment_method'] or 'N/A' }}</td>
+                    <td>{{ bill['created_at'] }}</td>
+                    <td class="no-print">
+                        <div style="display: flex; gap: 5px;">
+                            <a href="{{ url_for('billing.print_bill', id=bill['id']) }}" class="btn btn-info" style="padding: 6px 12px; font-size: 12px;">View</a>
+                            {% if bill['payment_status'] != 'Cancelled' %}
+                            <a href="{{ url_for('billing.update', bill_id=bill['id']) }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; background: #f39c12;">Edit</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+
+    <!-- Pagination Controls (Bottom) -->
+    {% if total_count > 0 %}
+        {% set route_name = 'billing.index' %}
+        {% set extra_params = {'show_cancelled': 'true' if show_cancelled else 'false'} %}
+        {% if search_query %}
+            {% set _ = extra_params.update({'search': search_query}) %}
+        {% endif %}
+        {% include 'pagination.html' %}
+    {% endif %}
+{% else %}
+    <div class="no-data">
+        {% if search_query %}
+            <p>No bills found for "{{ search_query }}".</p>
+        {% elif show_cancelled %}
+            <p>No cancelled bills found.</p>
+        {% else %}
+            <p>No bills found. Click "Create Bill" to get started!</p>
+        {% endif %}
+    </div>
+{% endif %}

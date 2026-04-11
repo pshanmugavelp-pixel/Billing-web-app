@@ -16,33 +16,36 @@ def _indian_financial_year_label(date_obj):
     fy_end_year = fy_start_year + 1
     return f'{fy_start_year % 100:02d}-{fy_end_year % 100:02d}'
 
-@billing_bp.route('/')
-def index():
-    """Display all bills with optional filter for cancelled bills and pagination"""
-    show_cancelled = request.args.get('show_cancelled', 'false') == 'true'
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    
+
+def _build_billing_index_context(*, show_cancelled: bool, search_query: str, page: int, per_page: int):
+    """Build template context for billing index + AJAX partial search."""
     # Validate per_page values
     if per_page not in [10, 20, 50, 100]:
         per_page = 20
-    
+
     # Validate page number
     if page < 1:
         page = 1
-    
+
+    search_query = (search_query or '').strip()
+
+    where_clause = "b.payment_status = 'Cancelled'" if show_cancelled else "b.payment_status != 'Cancelled'"
+    params = []
+    if search_query:
+        like = f"%{search_query}%"
+        where_clause += " AND (b.bill_id LIKE ? OR c.name LIKE ? OR b.bill_date LIKE ?)"
+        params.extend([like, like, like])
+
     with db_connection() as conn:
-        # Get total count based on filter
-        if show_cancelled:
-            total_count = conn.execute('''
-                SELECT COUNT(*) as count FROM billing
-                WHERE payment_status = 'Cancelled'
-            ''').fetchone()['count']
-        else:
-            total_count = conn.execute('''
-                SELECT COUNT(*) as count FROM billing
-                WHERE payment_status != 'Cancelled'
-            ''').fetchone()['count']
+        total_count = conn.execute(
+            f"""
+                SELECT COUNT(*) as count
+                FROM billing b
+                JOIN customers c ON b.customer_id = c.id
+                WHERE {where_clause}
+            """,
+            params,
+        ).fetchone()['count']
 
         # Calculate pagination info
         total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
@@ -54,41 +57,69 @@ def index():
         # Calculate offset
         offset = (page - 1) * per_page
 
-        if show_cancelled:
-            # Show only cancelled bills
-            bills = conn.execute('''
+        bills = conn.execute(
+            f"""
                 SELECT b.*, c.name as customer_name,
                        (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
                 FROM billing b
                 JOIN customers c ON b.customer_id = c.id
-                WHERE b.payment_status = 'Cancelled'
+                WHERE {where_clause}
                 ORDER BY b.created_at DESC
                 LIMIT ? OFFSET ?
-            ''', (per_page, offset)).fetchall()
-        else:
-            # Show all bills except cancelled
-            bills = conn.execute('''
-                SELECT b.*, c.name as customer_name,
-                       (SELECT COUNT(*) FROM billing_items WHERE bill_id = b.bill_id) as item_count
-                FROM billing b
-                JOIN customers c ON b.customer_id = c.id
-                WHERE b.payment_status != 'Cancelled'
-                ORDER BY b.created_at DESC
-                LIMIT ? OFFSET ?
-            ''', (per_page, offset)).fetchall()
-    
+            """,
+            (*params, per_page, offset),
+        ).fetchall()
+
     has_prev = page > 1
     has_next = page < total_pages
-    
-    return render_template('billing/index.html',
-                         bills=bills,
-                         show_cancelled=show_cancelled,
-                         page=page,
-                         per_page=per_page,
-                         total_count=total_count,
-                         total_pages=total_pages,
-                         has_prev=has_prev,
-                         has_next=has_next)
+
+    return {
+        'bills': bills,
+        'show_cancelled': show_cancelled,
+        'search_query': search_query,
+        'page': page,
+        'per_page': per_page,
+        'total_count': total_count,
+        'total_pages': total_pages,
+        'has_prev': has_prev,
+        'has_next': has_next,
+    }
+
+
+@billing_bp.route('/search')
+def search_api():
+    """AJAX endpoint: return filtered bills table HTML + count for live search."""
+    show_cancelled = request.args.get('show_cancelled', 'false') == 'true'
+    search_query = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    context = _build_billing_index_context(
+        show_cancelled=show_cancelled,
+        search_query=search_query,
+        page=page,
+        per_page=per_page,
+    )
+
+    html = render_template('billing/_bills_table.html', **context)
+    return jsonify({'html': html, 'total_count': context['total_count']})
+
+@billing_bp.route('/')
+def index():
+    """Display all bills with optional filter for cancelled bills and pagination"""
+    show_cancelled = request.args.get('show_cancelled', 'false') == 'true'
+    search_query = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    context = _build_billing_index_context(
+        show_cancelled=show_cancelled,
+        search_query=search_query,
+        page=page,
+        per_page=per_page,
+    )
+
+    return render_template('billing/index.html', **context)
 
 @billing_bp.route('/create', methods=['GET', 'POST'])
 def create():
@@ -875,9 +906,40 @@ def update(bill_id):
 @billing_bp.route('/active-bills-export')
 def active_bills_export():
     """Display all active bills with detailed item information for Excel export"""
+    from_date = request.args.get('from_date', '').strip()
+    to_date = request.args.get('to_date', '').strip()
+    where_clause = "b.payment_status != 'Cancelled'"
+    params = []
+    from_date_obj = None
+    to_date_obj = None
+
+    try:
+        if from_date:
+            from_date_obj = datetime.strptime(from_date, '%Y-%m-%d').date()
+            where_clause += ' AND b.bill_date >= ?'
+            params.append(from_date)
+
+        if to_date:
+            to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
+            where_clause += ' AND b.bill_date <= ?'
+            params.append(to_date)
+
+        if from_date_obj and to_date_obj and from_date_obj > to_date_obj:
+            flash('From Date must be before or equal to To Date.', 'error')
+            from_date = ''
+            to_date = ''
+            where_clause = "b.payment_status != 'Cancelled'"
+            params = []
+    except ValueError:
+        flash('Invalid date format. Please use YYYY-MM-DD.', 'error')
+        from_date = ''
+        to_date = ''
+        where_clause = "b.payment_status != 'Cancelled'"
+        params = []
+
     with db_connection() as conn:
-        # Get all active bills (not cancelled) with customer details and items
-        bills = conn.execute('''
+        # Get active bills with optional date filtering
+        bills = conn.execute(f'''
             SELECT
                 b.id,
                 b.bill_id,
@@ -898,13 +960,21 @@ def active_bills_export():
                 c.state
             FROM billing b
             JOIN customers c ON b.customer_id = c.id
-            WHERE b.payment_status != 'Cancelled'
+            WHERE {where_clause}
             ORDER BY b.created_at DESC
-        ''').fetchall()
+        ''', params).fetchall()
 
         # Get items for each bill
         bills_with_items = []
         for bill in bills:
+            # Calculate financial year for bill ID display
+            bill_dict = dict(bill)
+            if bill_dict['bill_date']:
+                date_obj = datetime.strptime(bill_dict['bill_date'], '%Y-%m-%d').date()
+                bill_dict['financial_year'] = _indian_financial_year_label(date_obj)
+            else:
+                bill_dict['financial_year'] = _indian_financial_year_label(datetime.today().date())
+
             items = conn.execute('''
                 SELECT
                     bi.product_name,
@@ -924,8 +994,13 @@ def active_bills_export():
 
             # Add all bills, even if they have no items
             bills_with_items.append({
-                'bill': dict(bill),
+                'bill': bill_dict,
                 'items': [dict(item) for item in items] if items else []
             })
 
-        return render_template('billing/active_bills_export.html', bills_with_items=bills_with_items)
+        return render_template(
+            'billing/active_bills_export.html',
+            bills_with_items=bills_with_items,
+            from_date=from_date,
+            to_date=to_date,
+        )
