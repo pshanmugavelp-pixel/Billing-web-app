@@ -173,8 +173,8 @@
             
             <div class="form-row">
                 <div class="form-group">
-                    <label for="hsn_code">HSN Code</label>
-                    <input type="text" name="hsn_code" id="hsn_code">
+                    <label for="hsn_code">HSN Code <span style="color: red;">*</span></label>
+                    <input type="text" name="hsn_code" id="hsn_code" required>
                 </div>
                 
                 <div class="form-group">
@@ -245,8 +245,11 @@
     </div>
     
     <script>
-        // Set today's date as default
-        document.getElementById('purchase_date').valueAsDate = new Date();
+        // Set today's date as default and as max
+        const today = new Date().toISOString().split('T')[0];
+        const purchaseDateInput = document.getElementById('purchase_date');
+        purchaseDateInput.valueAsDate = new Date();
+        purchaseDateInput.max = today;
         
         // Expiry date calculation
         document.addEventListener('DOMContentLoaded', function() {

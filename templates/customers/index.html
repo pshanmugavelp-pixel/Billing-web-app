@@ -282,13 +282,6 @@
             <span class="selection-text"><span id="selectedCount">0</span> customer(s) selected</span>
         </div>
         
-        <!-- Pagination Controls (Top) -->
-        {% if total_count > 0 %}
-            {% set route_name = 'customers.index' %}
-            {% set extra_params = {'search': search_query} if search_query else {} %}
-            {% include 'pagination.html' %}
-        {% endif %}
-        
         {% if customers %}
             <div class="table-wrapper">
                 <form id="deleteForm" method="POST" action="{{ url_for('customers.delete_multiple') }}">
@@ -343,13 +336,6 @@
                     </table>
                 </form>
             </div>
-            
-            <!-- Pagination Controls (Bottom) -->
-            {% if total_count > 0 %}
-                {% set route_name = 'customers.index' %}
-                {% set extra_params = {'search': search_query} if search_query else {} %}
-                {% include 'pagination.html' %}
-            {% endif %}
         {% else %}
             <div class="no-data">
                 <p>No customers found. Click "Add Customer" to get started!</p>

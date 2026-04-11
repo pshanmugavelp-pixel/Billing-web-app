@@ -217,14 +217,18 @@ th {
     <td colspan="2" class="bill-address">
         {{ bill['customer_name']|upper }}<br>
         {{ bill['address'] }}<br>
-        GST: {{ bill['gst_number'] or 'N/A' }}<br>
+        {% if bill['gst_number'] and bill['gst_number'].strip() %}
+        GST: {{ bill['gst_number'] }}<br>
+        {% endif %}
         {{ bill['mobile'] }}
 
     </td>
     <td colspan="2" class="bill-address">
         {{ bill['customer_name']|upper }}<br>
         {{ bill['address'] }}<br>
-        GST: {{ bill['gst_number'] or 'N/A' }}<br>
+        {% if bill['gst_number'] and bill['gst_number'].strip() %}
+        GST: {{ bill['gst_number'] }}<br>
+        {% endif %}
         {{ bill['mobile'] }}
     </td>
     <th>Date</th>
@@ -256,7 +260,7 @@ th {
         <th colspan="2" class="gst-block">IGST</th>
     {% endif %}
 
-    <th rowspan="2" class="col-total">TOTAL</th>
+    <th rowspan="2" class="col-total">TOTAL <br> Incl. Tax </th>
 </tr>
 
 <tr>

@@ -11,68 +11,30 @@ customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
 
 @customers_bp.route('/')
 def index():
-    """Display all customers with optional search and pagination"""
+    """Display all customers with optional search - no pagination"""
     search_query = request.args.get('search', '').strip()
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    
-    # Validate per_page values
-    if per_page not in [10, 20, 50, 100]:
-        per_page = 20
-    
-    # Validate page number
-    if page < 1:
-        page = 1
     
     with db_connection() as conn:
         if search_query:
-            # Get total count for search
-            total_count = conn.execute('''
-                SELECT COUNT(*) as count FROM customers
-                WHERE customer_id LIKE ? OR vendor_code LIKE ? OR name LIKE ?
-            ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchone()['count']
-        else:
-            # Get total count
-            total_count = conn.execute('SELECT COUNT(*) as count FROM customers').fetchone()['count']
-
-        # Calculate pagination info
-        total_pages = max(1, (total_count + per_page - 1) // per_page) if total_count > 0 else 1
-
-        # Ensure page doesn't exceed total_pages
-        if page > total_pages:
-            page = total_pages
-
-        # Calculate offset
-        offset = (page - 1) * per_page
-
-        if search_query:
-            # Search by customer_id, vendor_code, or name with pagination
+            # Get all matching customers
             customers = conn.execute('''
                 SELECT * FROM customers
                 WHERE customer_id LIKE ? OR vendor_code LIKE ? OR name LIKE ?
                 ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
-            ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', per_page, offset)).fetchall()
+            ''', (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
         else:
-            # Get paginated customers
+            # Get all customers
             customers = conn.execute('''
                 SELECT * FROM customers
                 ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
-            ''', (per_page, offset)).fetchall()
+            ''').fetchall()
     
-    has_prev = page > 1
-    has_next = page < total_pages
+    total_count = len(customers)
     
     return render_template('customers/index.html',
                          customers=customers,
                          search_query=search_query,
-                         page=page,
-                         per_page=per_page,
-                         total_count=total_count,
-                         total_pages=total_pages,
-                         has_prev=has_prev,
-                         has_next=has_next)
+                         total_count=total_count)
 
 @customers_bp.route('/add', methods=['GET', 'POST'])
 def add():

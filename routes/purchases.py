@@ -104,12 +104,22 @@ def add():
         gst_percentage = float(request.form['gst_percentage'])
         purchase_date = request.form['purchase_date']
         
-        if not product_name or not manufacture_month or not expiry_month or quantity <= 0:
-            flash('Please fill in all required fields with valid values!', 'error')
+        if not product_name or not hsn_code or not manufacture_month or not expiry_month or quantity <= 0:
+            flash('Please fill in all required fields with valid values! HSN Code is mandatory.', 'error')
+            return redirect(url_for('purchases.add'))
+        
+        # Validate purchase_date is not in the future
+        from datetime import datetime
+        try:
+            purchase_date_obj = datetime.strptime(purchase_date, '%Y-%m-%d').date()
+            if purchase_date_obj > datetime.today().date():
+                flash('Purchase Date cannot be in the future!', 'error')
+                return redirect(url_for('purchases.add'))
+        except ValueError:
+            flash('Invalid Purchase Date format!', 'error')
             return redirect(url_for('purchases.add'))
         
         # Convert manufacture month to full date (1st of the month)
-        from datetime import datetime
         manufacture_date = f"{manufacture_month}-01"  # YYYY-MM-01
         
         with db_connection() as conn:
